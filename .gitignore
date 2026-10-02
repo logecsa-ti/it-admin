@@ -1,0 +1,85 @@
+# ============================================================================
+# TI Admin - .gitignore
+# ============================================================================
+
+# ---------- .NET ----------
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+.vs/
+.vscode/
+.idea/
+*.csproj.user
+TestResults/
+*.trx
+*.coverage
+coverage*.json
+coverage*.xml
+*.nupkg
+*.snupkg
+artifacts/
+BenchmarkDotNet.Artifacts/
+
+# ---------- Node / Angular ----------
+node_modules/
+dist/
+dist-*/
+.angular/
+tmp/
+out-tsc/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.angular/
+.vite/
+
+# ---------- Secrets ----------
+*.env
+*.env.*
+!.env.example
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+*.pfx
+*.key
+*.p12
+*.pem
+credentials.json
+
+# ---------- IDE / OS ----------
+Thumbs.db
+.DS_Store
+ehthumbs.db
+Desktop.ini
+
+# ---------- Logs ----------
+*.log
+logs/
+log/
+
+# ---------- Docker / Volumes ----------
+docker-data/
+*.tar
+postgres-data/
+mssql-data/
+volumes/
+
+# ---------- Testing ----------
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# ---------- Temp ----------
+*.bak
+*.tmp
+*.orig
+*.swp
