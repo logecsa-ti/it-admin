@@ -5,21 +5,28 @@
 **Fecha de inicio:** 2026-10-02
 **Última actualización:** 2026-10-02
 **Estado general:** En progreso
-**Fase actual:** Fase 0 - Preparación y Fundación (completada) → Fase 1 - Infraestructura Base
+**Fase actual:** Fase 2 - Autenticación, Autorización y Seguridad (Fase 1 completada)
 
 ---
 
 ## 0. Bloqueos del entorno
 
-| Recurso | Estado | Impacto |
+| Recurso | Estado | Detalle |
 |---|---|---|
-| .NET SDK 10 | ❌ NO INSTALADO | Bloquea Fase 1 completa (creación de solución, proyectos, migraciones EF) |
-| Node.js | ✅ v24.21.0 | Disponible para Angular |
-| Docker CLI | ✅ instalado | Disponible |
-| Docker daemon | ❌ NO CORRIENDO | Bloquea docker-compose (SQL Server local) |
-| Git | ✅ v2.55.0 | Operativo |
+| .NET SDK 10 | ✅ Operativo | 10.0.401 en `C:\Program Files\dotnet` (requiere agregar al PATH) |
+| Node.js | ✅ Operativo | v24.21.0 |
+| Docker | ✅ Operativo | Engine 29.7.2 |
+| Git | ✅ Operativo | v2.55.0 |
 
-**Acción requerida del usuario:** instalar .NET 10 SDK e iniciar Docker Desktop antes de iniciar Fase 1.
+**Entorno desbloqueado.** B-01 y B-02 resueltos.
+
+### Nota de PATH
+
+`dotnet` no está en el PATH del sistema. Para usar los comandos de esta sesión se antepone:
+```powershell
+$env:PATH = "C:\Program Files\dotnet;$env:PATH"
+```
+Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futuras sesiones.
 
 ---
 
@@ -38,9 +45,9 @@
 
 | Métrica | Valor |
 |---|---|
-| Fase actual | **Fase 1 - Infraestructura Base** (lista para iniciar) |
-| Fases completadas | 1 / 12 (Fase 0) |
-| Tareas completadas (Fase 0) | 4 / 4 |
+| Fase actual | **Fase 2 - Auth/Authz/Seguridad** (lista para iniciar) |
+| Fases completadas | 2 / 12 (Fase 0, Fase 1) |
+| Tareas completadas (Fase 1) | 8 / 8 |
 | Estado | En progreso |
 
 ### Progreso global
@@ -48,7 +55,7 @@
 | Fase | Estado |
 |---|---|
 | 0 - Preparación y Fundación | ✅ Completada |
-| 1 - Infraestructura Base | ⏸️ Bloqueada (requiere .NET 10 SDK) |
+| 1 - Infraestructura Base | ✅ Completada |
 | 2 - Auth/Authz/Seguridad | ⬜ Pendiente |
 | 3 - Núcleo Organizacional | ⬜ Pendiente |
 | 4 - Activos y Asignaciones | ⬜ Pendiente |
@@ -79,6 +86,18 @@
 | 2026-10-02 | Fase 0.3 | Creado `docs/ARCHITECTURE.md` | `docs/ARCHITECTURE.md` | Capas, módulos, flujo de request, decisiones de diseño |
 | 2026-10-02 | Fase 0.4 | Creado `docs/ERD.md` | `docs/ERD.md` | ERD Mermaid + detalle de ~30 entidades, índices y cardinalidades |
 | 2026-10-02 | Fase 0 | **Fase 0 completada** (4/4 tareas) | — | Documentación base lista |
+| 2026-10-02 | Fase 1.1 | Creada solución `TIAdmin.slnx` (.NET 10) + 5 proyectos en `src/` con referencias cruzadas | `TIAdmin.slnx`, `src/**` | Domain ← Application ← Infrastructure ← Api; Tests referencia todo |
+| 2026-10-02 | Fase 1.2 | Agregados ~30 paquetes NuGet | `*.csproj` | EF Core 10.0.12, Identity 10.0.12, MediatR 14, FluentValidation 12, Mapster 10, Serilog 10, Swashbuckle 10, xUnit, NSubstitute, FluentAssertions, Testcontainers |
+| 2026-10-02 | Fase 1.3 | Options Pattern (`Options.cs`) + `appsettings.json`/`.Development.json` | `Application/Common/Models/Options.cs` | Jwt, App, Cors, RateLimiting, Storage, Email, Cache, Seed. Sin secretos en repo |
+| 2026-10-02 | Fase 1.4 | Domain: `IEntity`/`ISoftDeletable`/`IAuditableEntity`, clases base, 30+ enums, excepciones, `IClock`/`ICurrentUserService` | `Domain/**` | Cero dependencias de frameworks |
+| 2026-10-02 | Fase 1.4 | Catálogo de **54 permisos** y matriz de 7 roles | `Application/Common/Constants/Permissions.cs` | `PermissionDefinition` deriva `Code` de `Module.Action` (imposible divergir) |
+| 2026-10-02 | Fase 1.5 | `TIAdminDbContext` (IdentityDbContext) + Fluent API + query filter soft delete + interceptor auditoría | `Infrastructure/Persistence/**` | `TIAdminDbContextFactory` design-time (requerido por `dotnet ef`) |
+| 2026-10-02 | Fase 1.6 | `DatabaseSeeder`: permisos, roles, 12 asset types, 9 configuraciones, admin | `Infrastructure/Persistence/Seeding/DatabaseSeeder.cs` | Idempotente. `Seed:Enabled` debe ser false en producción |
+| 2026-10-02 | Fase 1.7 | **Migración `InitialCreate` aplicada** a SQL Server 2022 (docker) | `Infrastructure/Persistence/Migrations/**` | 15 tablas. Sin cambios de modelo pendientes |
+| 2026-10-02 | Fase 1.7 | **Corrección**: eliminada singularización global de tablas | `ModelBuilderExtensions.cs` | Producía `Department` vs `Users` inconsistente. Nombres ahora explícitos y plurales (SPECS §62) |
+| 2026-10-02 | Fase 1.7 | Recreada la migración y base de datos desde cero | — | Historial limpio: solo `InitialCreate` |
+| 2026-10-02 | Fase 1.8 | **Verificado**: 28/28 tests, `/health` `/health/live` `/health/ready` `/swagger` → 200, seed aplicado (54 perm, 7 roles, 200 role-permisos, 1 admin, 12 tipos, 9 configs) | — | Fase 1 completada |
+| 2026-10-02 | Fase 1 | **Fase 1 completada** (8/8 tareas) | — | Backend base operativo y verificable |
 
 ---
 
@@ -95,19 +114,28 @@
 **Entregables completados:** Git inicializado con `main`/`develop`, README, CONTRIBUTING, CONVENTIONS, ARCHITECTURE, ERD, docker-compose, .env.example.
 
 ### Fase 1 - Infraestructura Base (Solución, Capas, Persistencia)
-**Estado:** ⏸️ Bloqueada - requiere instalar .NET 10 SDK y Docker Desktop
+**Estado:** ✅ Completada | **Tareas:** 8/8
 
-Tareas previstas:
-- [ ] 1.1 Crear `TIAdmin.sln` + 5 proyectos
-- [ ] 1.2 Agregar dependencias NuGet (EF Core 10, Identity, JWT, FluentValidation, Mapster, Serilog, HealthChecks, OpenAPI)
-- [ ] 1.3 Configuración Options Pattern + `appsettings.*.json`
-- [ ] 1.4 `TIAdminDbContext` + Fluent API + convenciones (soft delete, UTC timestamps)
-- [ ] 1.5 Seed de roles/permisos + usuario SUPER_ADMIN (solo dev)
-- [ ] 1.6 Migración `InitialCreate`
-- [ ] 1.7 Health checks + `/health`
+- [x] 1.1 Solución `TIAdmin.slnx` + 5 proyectos con referencias cruzadas
+- [x] 1.2 Dependencias NuGet (EF Core 10, Identity, MediatR, FluentValidation, Mapster, Serilog, Swashbuckle)
+- [x] 1.3 Options Pattern + `appsettings.json` / `appsettings.Development.json` (sin secretos)
+- [x] 1.4 Domain: contratos base, clases base, enums, excepciones, puertos (`IClock`, `ICurrentUserService`)
+- [x] 1.5 `TIAdminDbContext` + Fluent API + query filter soft delete + `AuditSaveChangesInterceptor`
+- [x] 1.6 Seed idempotente: 54 permisos, 7 roles, 200 asignaciones, 12 tipos de activo, 9 configuraciones, admin
+- [x] 1.7 Migración `InitialCreate` aplicada (15 tablas, sin cambios pendientes)
+- [x] 1.8 Verificación: 28/28 tests verdes, health checks y OpenAPI responden 200
+
+**Entregables completados:** API .NET 10 arranque con Serilog, Swagger, Identity, health checks y base de datos SQL Server 2022 migrada y sembrada.
 
 ### Fase 2 - Autenticación, Autorización y Seguridad
-**Estado:** Pendiente
+**Estado:** Pendiente — es la siguiente
+
+Tareas previstas:
+- [ ] 2.1 Endpoints de login / refresh / me + emisión de JWT con claims de permisos
+- [ ] 2.2 `PermissionAuthorizationHandler` + políticas por permiso
+- [ ] 2.3 Middleware de correlation ID + manejo global de errores con `traceId`
+- [ ] 2.4 Rate limiting (global + endpoint de login), CORS, headers de seguridad
+- [ ] 2.5 Entidad `AuditLog` + interceptor que registre escrituras críticas
 
 ### Fase 3 - Núcleo Organizacional
 **Estado:** Pending
@@ -153,6 +181,10 @@ Tareas previstas:
 | ADR-006 | 2026-10-02 | Archivos binarios fuera de SQL Server (solo metadata) | SPECS.md §39; evita crecimiento de BD y permite CDN/object storage | Aprobado |
 | ADR-007 | 2026-10-02 | Organización del código por feature (vertical slices) en `Application` | SPECS.md §9; alta cohesión, evita carpetas técnicas gigantes | Aprobado |
 | ADR-008 | 2026-10-02 | `.env.example` + `.gitignore` para secretos; Docker Compose solo para SQL Server y Redis | SPECS.md §6.7/§17/§54 | Aprobado |
+| ADR-009 | 2026-10-02 | Nombres de tabla explícitos y en plural en cada configuración Fluent API | Evita la divergencia `Department`/`Users` que introdujo la singularización automática; SPECS.md §62 usa plural | Aprobado |
+| ADR-010 | 2026-10-02 | `PermissionDefinition.Code` se deriva de `Module`+`Action`, no se escribe a mano | Impide que el código y el módulo/acción diverjan (bug detectado por test) | Aprobado |
+| ADR-011 | 2026-10-02 | `TIAdminDbContextFactory` (design-time) en vez de arrancar la API para migrar | Evita exigir secretos JWT y BD viva al ejecutar `dotnet ef` | Aprobado |
+| ADR-012 | 2026-10-02 | Secretos de desarrollo en `dotnet user-secrets` (fuera del repo) | SPECS.md §17/§53; `appsettings.json` queda sin valores sensibles | Aprobado |
 
 ---
 
@@ -196,8 +228,8 @@ git log --oneline -5
 
 | ID | Descripción | Impacto | Resolución requerida |
 |---|---|---|---|
-| B-01 | **.NET 10 SDK no instalado** en la máquina | Bloquea Fase 1 completa | Instalar .NET 10 SDK (https://dotnet.microsoft.com/download) |
-| B-02 | **Docker Desktop daemon apagado** | Bloquea SQL Server local vía docker-compose | Iniciar Docker Desktop |
+| B-01 | ~~.NET 10 SDK no instalado~~ | — | ✅ RESUELTO: SDK 10.0.401 instalado |
+| B-02 | ~~Docker Desktop daemon apagado~~ | — | ✅ RESUELTO: Engine 29.7.2 activo |
 
 ### Decisiones pendientes
 
@@ -213,9 +245,23 @@ git log --oneline -5
 
 ## 8. Próximos Pasos
 
-1. **USUARIO**: instalar .NET 10 SDK e iniciar Docker Desktop (desbloquea B-01, B-02)
-2. Ejecutar `docker compose up -d sqlserver` para provisionar la BD de desarrollo
-3. Iniciar **Fase 1**: crear `TIAdmin.sln` + 5 proyectos con `dotnet new`
-4. Agregar paquetes NuGet y configurar Options Pattern + `appsettings`
-5. Crear `TIAdminDbContext` con convenciones (soft delete, UTC) y migración `InitialCreate`
+1. **Fase 2.1**: endpoints de login/refresh/me con emisión de JWT que incluya claims `permission`
+2. **Fase 2.2**: `PermissionAuthorizationHandler` + políticas por permiso (RBAC granular)
+3. **Fase 2.3**: middleware de correlation ID + manejo global de errores con `traceId`
+4. **Fase 2.4**: rate limiting, CORS restringido, headers de seguridad
+5. **Fase 2.5**: entidad `AuditLog` + registro de escrituras críticas
 6. Actualizar esta memoria tras cada cambio significativo
+
+### Comandos de arranque (dev)
+
+```powershell
+docker compose up -d sqlserver
+$env:PATH = "C:\Program Files\dotnet;$env:PATH"
+dotnet build .\TIAdmin.slnx
+dotnet run --project src/TIAdmin.Api      # http://localhost:5142 (launchSettings)
+```
+
+Secretos ya cargados en user-secrets del proyecto `TIAdmin.Api`:
+`ConnectionStrings:DefaultConnection`, `Jwt:*`, `Seed:Enabled`, `Seed:AdminPassword`.
+
+Admin de desarrollo: `admin` / `Admin123!Local`

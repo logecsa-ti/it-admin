@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/TIAdmin.Domain/TIAdmin.Domain.csproj" />
+  <Project Path="src/TIAdmin.Application/TIAdmin.Application.csproj" />
+  <Project Path="src/TIAdmin.Infrastructure/TIAdmin.Infrastructure.csproj" />
+  <Project Path="src/TIAdmin.Api/TIAdmin.Api.csproj" />
+  <Project Path="src/TIAdmin.Tests/TIAdmin.Tests.csproj" />
+</Solution>
