@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IClock, SystemClock>();
 
         services.AddScoped<AuditSaveChangesInterceptor>();
+        services.AddScoped<AuditTrailInterceptor>();
 
         services.AddDbContext<TIAdminDbContext>((provider, options) =>
         {
@@ -43,7 +44,9 @@ public static class ServiceCollectionExtensions
                 sql.CommandTimeout(60);
             });
 
-            options.AddInterceptors(provider.GetRequiredService<AuditSaveChangesInterceptor>());
+            options.AddInterceptors(
+                provider.GetRequiredService<AuditSaveChangesInterceptor>(),
+                provider.GetRequiredService<AuditTrailInterceptor>());
         });
 
         services.AddScoped<DatabaseSeeder>();

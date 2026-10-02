@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TIAdmin.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using TIAdmin.Infrastructure.Persistence;
 namespace TIAdmin.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TIAdminDbContext))]
-    partial class TIAdminDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261002193706_AddAuthenticationAndAudit")]
+    partial class AddAuthenticationAndAudit
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

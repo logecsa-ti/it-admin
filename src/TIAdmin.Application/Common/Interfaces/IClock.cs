@@ -27,5 +27,11 @@ public interface ICurrentUserService
 
     IReadOnlyCollection<string> Permissions { get; }
 
+    /// <summary>User-Agent de la peticion actual, para la auditoria.</summary>
+    string? UserAgent();
+
+    /// <summary>CorrelationId de la peticion actual.</summary>
+    string? CorrelationId { get; }
+
     bool IsAuthenticated { get; }
 }

@@ -50,6 +50,27 @@ public sealed class CurrentUserService(IHttpContextAccessor httpContextAccessor)
 
     public IReadOnlyCollection<string> Permissions =>
         User?.FindAll(TiClaimTypes.Permission).Select(c => c.Value).ToArray() ?? [];
+
+    public string? UserAgent() =>
+        httpContextAccessor.HttpContext?.Request.Headers.UserAgent.FirstOrDefault();
+
+    public string? CorrelationId
+    {
+        get
+        {
+            var context = httpContextAccessor.HttpContext;
+            if (context is null)
+            {
+                return null;
+            }
+
+            // Items es la fuente de verdad por peticion (CorrelationIdMiddleware).
+            // El claim se usa como respaldo cuando el token se emite fuera del pipeline HTTP.
+            return context.Items.TryGetValue("CorrelationId", out var value)
+                ? value?.ToString()
+                : User?.FindFirstValue(TiClaimTypes.CorrelationId);
+        }
+    }
 }
 
 /// <summary>

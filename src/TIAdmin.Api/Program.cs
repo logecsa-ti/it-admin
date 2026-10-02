@@ -1,8 +1,20 @@
+using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Serilog;
 using Serilog.Events;
+using TIAdmin.Api.Filters;
+using TIAdmin.Api.Middleware;
+using TIAdmin.Api.Services;
+using TIAdmin.Application.Common.Interfaces;
+using TIAdmin.Application.Common.Models;
 using TIAdmin.Infrastructure.Extensions;
+using TIAdmin.Infrastructure.Identity;
 using TIAdmin.Infrastructure.Persistence.Seeding;
 using TIAdmin.Infrastructure.Services;
 
@@ -21,7 +33,10 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 
 // ---------- Servicios base ----------
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+    {
+        options.Filters.Add<ValidatableRequestAttribute>();
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -35,8 +50,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "TI Admin API",
         Version = "v1",
-        Description = "Sistema Administrativo de Tecnologias de Informacion (SPECS.md v1.0)",
-        Contact = new OpenApiContact { Name = "Equipo TI" }
+        Description = "Sistema Administrativo de Tecnologias de Informacion (SPECS.md v1.0)"
     });
 
     var securityScheme = new OpenApiSecurityScheme
@@ -60,8 +74,121 @@ builder.Services.AddApplicationOptions(builder.Configuration);
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddIdentity();
 
-// ICurrentUserService depende de IHttpContextAccessor
-builder.Services.AddScoped<TIAdmin.Application.Common.Interfaces.ICurrentUserService, CurrentUserService>();
+// ---------- Autenticacion JWT (SPECS.md seccion 15.1) ----------
+var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+    ?? throw new InvalidOperationException(
+        "Falta la seccion 'Jwt' en la configuracion. Ver docs/DEV_MEMORY.md.");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtOptions.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(jwtOptions.ClockSkewSeconds),
+            RoleClaimType = System.Security.Claims.ClaimTypes.Role,
+            NameClaimType = System.Security.Claims.ClaimTypes.Name
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = context =>
+            {
+                // Un 401 nunca debe devolver el HTML del middleware de challenge.
+                context.HandleResponse();
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json; charset=utf-8";
+                return context.Response.WriteAsJsonAsync(new
+                {
+                    success = false,
+                    data = (object?)null,
+                    message = "No autenticado.",
+                    errors = new[] { new { code = "UNAUTHORIZED", message = "No autenticado." } }
+                });
+            },
+            OnForbidden = context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                context.Response.ContentType = "application/json; charset=utf-8";
+                return context.Response.WriteAsJsonAsync(new
+                {
+                    success = false,
+                    data = (object?)null,
+                    message = "No tiene permisos para esta operacion.",
+                    errors = new[] { new { code = "FORBIDDEN", message = "No tiene permisos para esta operacion." } }
+                });
+            }
+        };
+    });
+
+// ---------- Autorizacion por permiso (SPECS.md seccion 16) ----------
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+
+var allPermissions = TIAdmin.Application.Common.Constants.Permissions.All
+    .Select(p => p.Code)
+    .ToArray();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+
+    foreach (var permission in allPermissions)
+    {
+        options.AddPolicy(permission, policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.AddRequirements(new PermissionRequirement(permission));
+        });
+    }
+});
+
+// ---------- Puertos de aplicacion ----------
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<ITokenService, JwtTokenService>();
+builder.Services.AddScoped<IAuditContext, AuditContext>();
+
+// ---------- Rate limiting (SPECS.md seccion 17) ----------
+var rateLimitOptions = builder.Configuration.GetSection(RateLimitOptions.SectionName).Get<RateLimitOptions>()
+    ?? new RateLimitOptions();
+
+if (rateLimitOptions.Enabled)
+{
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+        // Politica global: trafico general de la API.
+        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = rateLimitOptions.GeneralPermitLimit,
+                    Window = TimeSpan.FromSeconds(rateLimitOptions.GeneralWindowSeconds),
+                    QueueLimit = 0
+                }));
+
+        // Politica estricta para endpoints de autenticacion (mitiga fuerza bruta).
+        options.AddPolicy("login", httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = rateLimitOptions.LoginPermitLimit,
+                    Window = TimeSpan.FromMinutes(rateLimitOptions.LoginWindowMinutes),
+                    QueueLimit = 0
+                }));
+    });
+}
 
 // ---------- Health Checks (SPECS.md seccion 42) ----------
 builder.Services.AddHealthChecks()
@@ -69,11 +196,16 @@ builder.Services.AddHealthChecks()
         connectionString: builder.Configuration.GetConnectionString("DefaultConnection") ?? string.Empty,
         name: "database",
         failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy)
-    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("API operativa"), tags: ["live"]);
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("API operativa"),
+        tags: ["live"]);
 
 var app = builder.Build();
 
-// ---------- Pipeline ----------
+// ---------- Pipeline: el orden importa ----------
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -89,11 +221,35 @@ else
     app.UseHttpsRedirection();
 }
 
+// CORS restringido a los origenes configurados (SPECS.md seccion 17).
+// Sin origenes configurados se aplica una politica vacia: fallo cerrado.
+var allowedOrigins = builder.Configuration.GetSection(CorsOptions.SectionName)
+    .Get<string[]>() ?? [];
+
+app.UseCors(policy =>
+{
+    if (allowedOrigins.Length == 0)
+    {
+        return;
+    }
+
+    policy.WithOrigins(allowedOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .WithExposedHeaders(CorrelationIdMiddleware.HeaderName)
+        .SetPreflightMaxAge(TimeSpan.FromHours(1));
+});
+
 app.UseSerilogRequestLogging(options =>
 {
     options.MessageTemplate =
-        "HTTP {RequestMethod} {RequestPath} respondió {StatusCode} en {Elapsed:0.0000} ms";
+        "HTTP {RequestMethod} {RequestPath} respondio {StatusCode} en {Elapsed:0.0000} ms";
 });
+
+if (rateLimitOptions.Enabled)
+{
+    app.UseRateLimiter();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
