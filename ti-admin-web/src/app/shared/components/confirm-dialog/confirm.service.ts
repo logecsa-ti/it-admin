@@ -9,10 +9,10 @@ export class ConfirmService {
   private readonly dialog = inject(MatDialog);
 
   confirm(options: ConfirmOptions): Observable<boolean> {
-    return this.open(options).pipe(map((result) => result !== false && result !== undefined));
+    return this.open(options).pipe(map((result) => result === true));
   }
 
-  /** Confirma pidiendo un motivo; emite el texto o null si se cancela. */
+  /** Confirma pidiendo un motivo; emite el texto (vacio si es opcional y no se escribio) o null si se cancela. */
   askReason(options: ConfirmOptions & { reason: NonNullable<ConfirmOptions['reason']> }): Observable<string | null> {
     return this.open(options).pipe(map((result) => (typeof result === 'string' ? result : null)));
   }

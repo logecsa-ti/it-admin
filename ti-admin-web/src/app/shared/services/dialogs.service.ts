@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { Observable, filter } from 'rxjs';
-import { FormDialogComponent, FormDialogData } from '@shared/components/form-dialog/form-dialog.component';
+import { Observable, filter, map } from 'rxjs';
+import { FormDialogComponent, FormDialogData, FormDialogResult } from '@shared/components/form-dialog/form-dialog.component';
 
 /** Abre formularios en dialogo; emite solo cuando se guardo con exito. */
 @Injectable({ providedIn: 'root' })
@@ -10,7 +10,7 @@ export class DialogsService {
 
   form<T>(data: FormDialogData<T>): Observable<T> {
     return this.dialog
-      .open<FormDialogComponent, FormDialogData<T>, T>(FormDialogComponent, {
+      .open<FormDialogComponent, FormDialogData<T>, FormDialogResult<T>>(FormDialogComponent, {
         data,
         width: '640px',
         maxWidth: '95vw',
@@ -18,6 +18,9 @@ export class DialogsService {
         disableClose: true,
       })
       .afterClosed()
-      .pipe(filter((result): result is T => result !== undefined && result !== null));
+      .pipe(
+        filter((closed): closed is FormDialogResult<T> => closed?.saved === true),
+        map((closed) => closed.result),
+      );
   }
 }
