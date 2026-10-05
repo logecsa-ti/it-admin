@@ -211,10 +211,11 @@ public static class Permissions
             ReportsView, ReportsExport, AuditView, DashboardView
         ],
 
+        // Sin ASSETS.VIEW: un usuario final solo consulta sus propios activos (GET /assets/mine), no el inventario (Q-10).
         SystemRoles.User =>
         [
             TicketsView, TicketsCreate, RequestsView, RequestsCreate,
-            AssetsView, DashboardView, NotificationsView
+            DashboardView, NotificationsView
         ],
 
         _ => []

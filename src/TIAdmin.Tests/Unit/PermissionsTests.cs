@@ -87,10 +87,16 @@ public class PermissionsTests
             Permissions.TicketsCreate,
             Permissions.RequestsView,
             Permissions.RequestsCreate,
-            Permissions.AssetsView,
             Permissions.DashboardView,
             Permissions.NotificationsView
         });
+    }
+
+    [Fact]
+    public void UserRole_ShouldNotSeeTheWholeInventory()
+    {
+        // Q-10: el usuario final solo ve sus activos asignados via GET /assets/mine.
+        Permissions.ForRole(SystemRoles.User).Should().NotContain(Permissions.AssetsView);
     }
 }
 

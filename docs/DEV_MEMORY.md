@@ -48,7 +48,7 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | Fase actual | **Fase 5 - Software/Licencias/Proveedores/Contratos** |
 | Fases completadas | 5 / 12 (Fase 0, 1, 2, 3, 4) |
 | Tareas completadas (Fase 4) | 5 / 6 (relación con Documents pasa a Fase 10) |
-| Tests | 116 / 116 (60 unit + 56 functional) |
+| Tests | 117 / 117 (61 unit + 56 functional) |
 | Estado | En progreso |
 
 ### Progreso global
@@ -127,6 +127,7 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 2026-10-05 | Fase 4 | `ValidationExtensions.ValidateAsync` compartido por controllers (antes duplicado) | `Api/Controllers/ValidationExtensions.cs` | — |
 | 2026-10-05 | General | **Corrección**: las fechas se devolvían sin `Z` (datetime2 no guarda el Kind → `Unspecified`); el frontend las habría interpretado como hora local (−6 h en Managua). `UtcDateTimeConverter` como convención para todo `DateTime`/`DateTime?` (sin cambio de esquema) | `TIAdminDbContext.cs`, `UtcDateTimeConverter.cs` | ADR-019. Verificado en SQL Server |
 | 2026-10-05 | Fase 4 | +37 tests: `AssetTests` (dominio, sin BD) y `AssetsEndpointsTests` (ciclo de vida completo con historial, estados, movimientos, permisos, tipos). Verificado en SQL Server: proyecciones con subconsultas, historial de activos eliminados, serial reservado | `Tests/**` | 116/116 |
+| 2026-10-05 | Fase 4 | **Q-10 resuelto**: el rol USER pierde `ASSETS.VIEW` (solo `GET /assets/mine`). Matriz en `Permissions.ForRole` + migración de datos `RemoveAssetsViewFromUserRole` para bases existentes (aplicada; verificado: USER → 403 en `/assets`, 200 en `/assets/mine`) | `Permissions.cs`, `Migrations/**`, tests | ADR-020. 117/117 |
 | 2026-10-05 | Fase 3 | **Verificado contra SQL Server**: login, 401 JSON sin token, CRUD departamentos (padre inexistente 400, ciclo 400, borrar con hijos 409, paginación/orden, soft delete + AuditLog Delete, código reservado 400), `GET /locations` paginado | — | Smoke test manual con curl |
 
 ---
@@ -192,7 +193,7 @@ Pendientes conocidos (no bloquean):
 - [ ] 4.6 Relación con Documents → Fase 10
 
 Pendientes / decisiones abiertas:
-- Q-10: el rol USER tiene `ASSETS.VIEW` (ve todo el inventario) aunque su descripción dice "consulta de sus propios activos". Se agregó `GET /assets/mine`; decidir si quitar `ASSETS.VIEW` a USER
+- ~~Q-10~~ resuelto (ADR-020): USER ya no tiene `ASSETS.VIEW`; consulta solo sus activos con `GET /assets/mine` (sin acceso al detalle `GET /assets/{id}`)
 - Desactivar un usuario con activos asignados no está bloqueado ni avisa
 - `VendorId` en `Assets` sin FK hasta que exista `Vendors` (Fase 5)
 
@@ -244,6 +245,7 @@ Pendientes / decisiones abiertas:
 | ADR-016 | 2026-10-05 | Los usuarios no se eliminan: se desactivan (`USERS.DISABLE`) y se revocan sus refresh tokens. Asignar roles/permisos exige `ROLES.MANAGE` | Conserva historial (asignaciones, tickets, auditoría); asignar roles es escalar privilegios | Propuesto |
 | ADR-018 | 2026-10-05 | Reglas de estado del activo en la entidad de dominio (`Asset.AssignTo/Return/ChangeStatus`, setters privados); orquestación en un servicio de Application (`AssetService`) | Clean Architecture (CONVENTIONS §1.3): reglas testeables sin BD; los controllers quedan delgados. Patrón para flujos con varias entidades | Propuesto |
 | ADR-019 | 2026-10-05 | Convención EF `UtcDateTimeConverter` para todo `DateTime`: se lee con `Kind=Utc` | ADR-005; JSON con `Z` para que el frontend convierta a la zona configurada | Propuesto |
+| ADR-020 | 2026-10-05 | El rol USER no ve el inventario (`ASSETS.VIEW` retirado); solo sus activos asignados vía `GET /assets/mine`. Bases existentes: migración de datos `RemoveAssetsViewFromUserRole` | Decisión de negocio (Q-10). Por ADR-017, los cambios de matriz para roles existentes requieren migración de datos | Aprobado |
 | ADR-017 | 2026-10-05 | El seed aplica la matriz de permisos por defecto solo al crear un rol de sistema; SUPER_ADMIN siempre recibe el catálogo completo | Los cambios hechos vía `/roles` no deben revertirse al reiniciar; permisos nuevos del catálogo llegan a SUPER_ADMIN y se asignan al resto vía API | Propuesto |
 
 ---
@@ -301,15 +303,14 @@ git log --oneline -5
 | Q-06 | ¿Enums persistidos como `int` o `string`? | Equipo técnico |
 | Q-07 | ¿`Tickets` y `ServiceRequests` unificados? | Negocio/TI |
 | Q-09 | ¿Cifrado de `LicenseKey` con Data Protection o SQL Always Encrypted? | Seguridad |
-| Q-10 | ¿El rol USER debe ver todo el inventario (`ASSETS.VIEW`) o solo sus activos (`GET /assets/mine`)? | Negocio/TI |
+| ~~Q-10~~ | ~~¿El rol USER debe ver todo el inventario?~~ → No, solo sus activos asignados (ADR-020) | Resuelto 2026-10-05 |
 
 ---
 
 ## 8. Próximos Pasos
 
-1. Decidir Q-10 (permisos del rol USER sobre activos)
-2. **Fase 5**: Vendors, Software, SoftwareLicenses (sin sobreasignación, `LicenseKey` protegida), Contracts con alertas configurables; FK `Assets.VendorId`
-3. Tests de integración con Testcontainers (SQL Server real)
+1. **Fase 5**: Vendors, Software, SoftwareLicenses (sin sobreasignación, `LicenseKey` protegida), Contracts con alertas configurables; FK `Assets.VendorId`
+2. Tests de integración con Testcontainers (SQL Server real)
 3. Actualizar esta memoria tras cada cambio significativo
 
 ### Comandos de arranque (dev)

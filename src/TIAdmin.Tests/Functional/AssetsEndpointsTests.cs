@@ -214,6 +214,11 @@ public sealed class AssetsEndpointsTests(TIAdminApiFactory factory) : IClassFixt
         var bySearch = await GetAsync<PagedData<AssetData>>(manager, $"/api/v1/assets?search={mine.AssetCode}");
         using var userClient = await factory.LoginFreshAsync(user.UserName, Password);
         var own = await GetAsync<PagedData<AssetData>>(userClient, "/api/v1/assets/mine");
+        var inventory = await userClient.GetAsync("/api/v1/assets");
+        var ownDetail = await userClient.GetAsync($"/api/v1/assets/{mine.Id}");
+
+        inventory.StatusCode.Should().Be(HttpStatusCode.Forbidden, "el rol USER no ve el inventario completo (Q-10)");
+        ownDetail.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         byUser.Items.Should().ContainSingle().Which.Id.Should().Be(mine.Id);
         byUser.Items[0].CurrentUserName.Should().Be("Prueba Activos");
