@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddSingleton<CatalogCache>();
         services.AddScoped<AssetMovementLog>();
         services.AddScoped<IAssetService, AssetService>();
+        services.AddScoped<IAssetHandoverService, AssetHandoverService>();
         services.AddScoped<IVendorService, VendorService>();
         services.AddScoped<IContractService, ContractService>();
         services.AddScoped<ISoftwareService, SoftwareService>();

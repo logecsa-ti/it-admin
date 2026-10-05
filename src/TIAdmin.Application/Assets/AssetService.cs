@@ -43,6 +43,7 @@ public sealed class AssetService(
     IUserDirectory userDirectory,
     ICurrentUserService currentUser,
     AssetMovementLog movementLog,
+    IAssetHandoverService handover,
     IClock clock)
     : IAssetService
 {
@@ -160,6 +161,7 @@ public sealed class AssetService(
         await AddMovementAsync(asset, AssetMovementType.Assignment, null, assignee.Label,
             Normalize(request.Notes), cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await handover.ArchiveAsync(assignment.Id, HandoverKind.Delivery, cancellationToken);
 
         return await GetAsync(id, cancellationToken);
     }
@@ -180,6 +182,7 @@ public sealed class AssetService(
             previousHolder?.Label ?? $"UserId={active.UserId}", asset.Status.ToString(),
             Normalize(request.Notes), cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await handover.ArchiveAsync(active.Id, HandoverKind.Return, cancellationToken);
 
         return await GetAsync(id, cancellationToken);
     }

@@ -48,7 +48,7 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | Fase actual | **Fase 12 - Despliegue/Go-Live** |
 | Fases completadas | 12 / 13 (Fases 0-11; Fase 12 pendiente) |
 | Tareas completadas (Fase 9) | 7 / 7 |
-| Tests | Backend 228 (221 unit + functional, 7 integration SQL Server) · Frontend 27 (Vitest) |
+| Tests | Backend 234 (227 unit + functional, 7 integration SQL Server) · Frontend 33 (Vitest) |
 | Estado | En progreso |
 
 ### Progreso global
@@ -154,6 +154,8 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 2026-10-05 | Fase 9 | SPA `ti-admin-web` (Angular 22, standalone, signals, Angular Material): core (ApiService, AuthService, guards, interceptores), layout con menú por permisos, componentes compartidos y los módulos de la Fase 9 (commit `1151a70`) | `ti-admin-web/**` | Tipos desde `openapi/tiadmin-api.json`; permisos desde `Permissions.cs` |
 | 2026-10-05 | Fase 9 | Backend para la SPA: OpenAPI respeta la nulabilidad de C#; `[FromForm] IFormFile` rompía `/swagger` (test `OpenApiDocumentTests`); limitador `refresh` propio (30/min) para que recargar no choque con el de login; CORS expone `Content-Disposition`; documentos ordenados antes de proyectar (no traducía a SQL) | `Program.cs`, `AssetsController.cs`, `DocumentsController.cs`, `PlatformRepositories.cs` | Verificado: build con `CI=true` y 221 pruebas en verde |
 | 2026-10-05 | Fase 9 | Cierre: detalle de proveedor `/proveedores/:id` (contratos, licencias y documentos; la API ya aceptaba adjuntos de `Vendor` sin pantalla), calendario mensual de mantenimientos (agrupa por fecha en `App.TimeZone`), los errores que no son `ApiResponse` (HTML de un proxy, fallo de parseo) ya no muestran el texto técnico, job `frontend` en CI (permisos sincronizados, tipos, Vitest, build, `npm audit`) y README de la SPA | `vendor-detail/**`, `maintenance-calendar.component.ts`, `api-error.ts`, `ci.yml` | +6 pruebas (27). Pantallas verificadas en Chromium contra API simulada |
+| 2026-10-05 | Fase 9 | **Corrección crítica**: los botones Cancelar usaban `mat-dialog-close` sin valor (cierra con `""`). `DialogsService.form` lo trataba como guardado (toast de éxito sin llamar a la API, p. ej. "Activo asignado") y `ConfirmService.confirm` como confirmado (**cancelar una eliminación la ejecutaba**; aprobar un cambio con comentario opcional también). Cancelar cierra explícitamente y el formulario envuelve su resultado | `form-dialog`, `confirm-dialog`, `dialogs.service.ts`, `confirm.service.ts` | Pruebas con el MatDialog real; fallan con el código anterior |
+| 2026-10-05 | Fase 9 | Actas de entrega y devolución de equipos en PDF (QuestPDF, resuelve Q-03): se archivan como documento del activo al asignar/devolver (categorías `ActaEntrega`/`ActaDevolucion`, número `ENT/DEV-AAAA-{IdAsignación}`), con firmas y cláusula configurable (`Assets.Handover.DeliveryClause` / `ReturnClause`). `GET /assets/{id}/assignments/{assignmentId}/handover/{delivery|return}` devuelve la copia archivada o la genera (asignaciones anteriores). En la SPA se descargan al asignar/devolver y desde el historial. El selector de usuario muestra sugerencias al enfocar | `AssetHandoverService.cs`, `HandoverDocumentRenderer.cs`, `AssetsController.cs`, `DatabaseSeeder.cs`, `asset-detail/**`, `entity-picker` | ADR-040. +6 pruebas backend, +6 frontend |
 | 2026-10-05 | Fase 5 | +34 tests (22 dominio + 12 funcionales). Verificado en SQL Server: filtros de estado efectivo, alertas, clave cifrada (`CfDJ8…`) sin fugas en auditoría, CHECK `UsedQuantity <= Quantity`, carrera sobre el último puesto | `Tests/**` | 151/151 |
 | 2026-10-05 | Fase 3 | **Verificado contra SQL Server**: login, 401 JSON sin token, CRUD departamentos (padre inexistente 400, ciclo 400, borrar con hijos 409, paginación/orden, soft delete + AuditLog Delete, código reservado 400), `GET /locations` paginado | — | Smoke test manual con curl |
 
@@ -295,7 +297,7 @@ Pendientes / decisiones abiertas:
 Pendientes / decisiones abiertas:
 - Pruebas end-to-end (Playwright) contra la API real en CI: hoy hay pruebas unitarias y verificación manual
 - `openapi/tiadmin-api.json` se actualiza a mano (`npm run api:snapshot` con la API en Development); CI no detecta si quedó desfasado
-- Exportación PDF depende de Q-03
+- Exportación de reportes a PDF: la librería ya está elegida (QuestPDF, ADR-040), falta implementarla
 
 ### Fase 10 - Integraciones/Notificaciones/Archivos/Caché/Import-Export
 **Estado:** ✅ Completada | **Tareas:** 6/6
@@ -308,7 +310,7 @@ Pendientes / decisiones abiertas:
 - [x] 10.6 Importación de activos (`/assets/import`, plantilla `/assets/import/template`): CSV/Excel, validación completa y todo o nada, `dryRun` (ADR-037)
 
 Pendientes / decisiones abiertas:
-- PDF: Q-03 (QuestPDF vs DinkToPdf) sigue abierta
+- PDF: Q-03 resuelta con QuestPDF (ADR-040); la exportación de reportes a PDF sigue pendiente
 - Importación de usuarios, software, licencias y proveedores (solo activos implementado)
 - Redis (`Cache:Provider=redis`) no implementado: la caché es por instancia
 - Con varias instancias, la cola de correos/exportaciones es en memoria por instancia (las exportaciones pendientes se reencolan al reiniciar)
@@ -373,6 +375,7 @@ Decisiones:
 | ADR-020 | 2026-10-05 | El rol USER no ve el inventario (`ASSETS.VIEW` retirado); solo sus activos asignados vía `GET /assets/mine`. Bases existentes: migración de datos `RemoveAssetsViewFromUserRole` | Decisión de negocio (Q-10). Por ADR-017, los cambios de matriz para roles existentes requieren migración de datos | Aprobado |
 | ADR-038 | 2026-10-05 | SPA: access token solo en memoria; refresh token rotativo en `sessionStorage` (sobrevive a recargar, no a cerrar la pestaña); el interceptor renueva una sola vez ante varios 401. Permisos del perfil solo para UX (menú, rutas, botones); la API valida siempre | Un XSS no encuentra el access token en almacenamiento; recargar no obliga a iniciar sesión | Propuesto |
 | ADR-039 | 2026-10-05 | Contrato del frontend generado: tipos TypeScript desde el OpenAPI de la API (con nulabilidad de C#) y permisos desde `Permissions.cs`; CI falla si los permisos se desfasan | Una sola fuente de verdad; un cambio de DTO rompe la compilación de la SPA en lugar de fallar en tiempo de ejecución | Propuesto |
+| ADR-040 | 2026-10-05 | Actas de entrega/devolución en PDF con QuestPDF (licencia Community), generadas en el servidor y archivadas como `Document` del activo tras guardar la asignación. Un fallo del PDF o del almacenamiento se registra y no revierte la asignación; el endpoint `handover` entrega la copia archivada o la genera al momento | Constancia firmable y trazable sin depender de que alguien imprima; QuestPDF no requiere binarios externos (a diferencia de DinkToPdf/wkhtmltopdf). Resuelve Q-03 | Propuesto |
 | ADR-017 | 2026-10-05 | El seed aplica la matriz de permisos por defecto solo al crear un rol de sistema; SUPER_ADMIN siempre recibe el catálogo completo | Los cambios hechos vía `/roles` no deben revertirse al reiniciar; permisos nuevos del catálogo llegan a SUPER_ADMIN y se asignan al resto vía API | Propuesto |
 
 ---
@@ -439,7 +442,7 @@ git log --oneline -5
 
 ## 8. Próximos Pasos
 
-1. **Fase 12**: despliegue (IIS/Docker), endurecimiento final, documentación de operación. Decisiones abiertas: Q-03 (PDF), Redis para varias instancias
+1. **Fase 12**: despliegue (IIS/Docker), endurecimiento final, documentación de operación. Decisiones abiertas: Redis para varias instancias; confirmar la licencia de QuestPDF (Community solo con ingresos anuales < USD 1 M)
 2. Pruebas end-to-end de la SPA contra la API real (Playwright) y su job de CI
 3. Actualizar esta memoria tras cada cambio significativo
 

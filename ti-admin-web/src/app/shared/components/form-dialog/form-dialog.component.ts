@@ -107,6 +107,7 @@ export interface FormDialogData<T = unknown> {
                   [class.span-all]="field.wide"
                   [formControlName]="field.key"
                   [label]="field.label"
+                  [required]="!!field.required"
                   [search]="field.search!"
                   [initialLabel]="field.pickerLabel?.(data.value ?? {})"
                   [hint]="field.hint ?? null"

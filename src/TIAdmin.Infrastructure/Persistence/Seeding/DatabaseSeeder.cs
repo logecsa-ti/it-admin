@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using TIAdmin.Application.Assets;
 using TIAdmin.Application.Common.Constants;
 using TIAdmin.Application.Common.Models;
 using TIAdmin.Domain.Entities;
@@ -244,6 +245,19 @@ public sealed class DatabaseSeeder(
         logger.LogInformation("Seed: politicas de SLA iniciales insertadas.");
     }
 
+    // Texto impreso en las actas (documento formal): va con tildes, a diferencia de los mensajes de la API.
+    private const string DefaultDeliveryClause =
+        "El usuario declara recibir el equipo descrito en las condiciones indicadas y se compromete a utilizarlo " +
+        "exclusivamente para actividades laborales, cuidarlo y protegerlo, no instalar software no autorizado, no " +
+        "prestarlo ni trasladarlo sin autorización del área de TI, reportar de inmediato cualquier falla, pérdida o " +
+        "robo, y devolverlo al finalizar la asignación o su relación laboral. Los daños por uso indebido o negligencia " +
+        "podrán ser cargados al usuario conforme a las políticas internas.";
+
+    private const string DefaultReturnClause =
+        "El área de TI recibe el equipo descrito en las condiciones indicadas. Con esta acta finaliza la " +
+        "responsabilidad del usuario sobre el equipo, salvo por los daños o faltantes registrados en la condición " +
+        "de devolución.";
+
     private async Task SeedConfigurationsAsync(CancellationToken cancellationToken)
     {
         var defaults = new (string Key, string? Value, string Group, ConfigurationDataType Type, bool IsPublic, string Description)[]
@@ -262,7 +276,9 @@ public sealed class DatabaseSeeder(
             ("Changes.NumberPrefix", "CHG", "Changes", ConfigurationDataType.String, true, "Prefijo del numero de cambio"),
             ("Purchases.NumberPrefix", "PUR", "Purchases", ConfigurationDataType.String, true, "Prefijo del numero de solicitud de compra"),
             ("Exports.AsyncThreshold", "5000", "Exports", ConfigurationDataType.Int, false, "Filas a partir de las cuales una exportacion se procesa en segundo plano"),
-            ("Alerts.Maintenance.Days", "7", "Alerts", ConfigurationDataType.Int, true, "Dias de anticipacion para alertas de mantenimiento")
+            ("Alerts.Maintenance.Days", "7", "Alerts", ConfigurationDataType.Int, true, "Dias de anticipacion para alertas de mantenimiento"),
+            (AssetHandoverService.DeliveryClauseKey, DefaultDeliveryClause, "Assets", ConfigurationDataType.String, false, "Clausula de responsabilidad impresa en el acta de entrega de equipo"),
+            (AssetHandoverService.ReturnClauseKey, DefaultReturnClause, "Assets", ConfigurationDataType.String, false, "Texto de constancia impreso en el acta de devolucion de equipo")
         };
 
         var existing = await context.SystemConfigurations

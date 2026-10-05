@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using TIAdmin.Application.Assets;
 using TIAdmin.Application.Common.Interfaces;
 using TIAdmin.Application.Common.Models;
 using TIAdmin.Infrastructure.Identity;
@@ -80,6 +81,7 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<EmailDispatchWorker>();
         services.AddHostedService<AlertScanWorker>();
 
+        services.AddSingleton<IHandoverDocumentRenderer, HandoverDocumentRenderer>();
         services.AddSingleton<TabularFiles>();
         services.AddSingleton<ITabularFileWriter>(provider => provider.GetRequiredService<TabularFiles>());
         services.AddSingleton<ITabularFileReader>(provider => provider.GetRequiredService<TabularFiles>());
