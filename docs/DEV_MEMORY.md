@@ -5,7 +5,7 @@
 **Fecha de inicio:** 2026-10-02
 **Última actualización:** 2026-10-05
 **Estado general:** En progreso
-**Fase actual:** Fase 9 - Frontend Angular (backend completo: Fases 0-8, 10 y 11)
+**Fase actual:** Fase 12 - Despliegue/Go-Live (Fases 0-11 completadas)
 
 ---
 
@@ -45,10 +45,10 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 
 | Métrica | Valor |
 |---|---|
-| Fase actual | **Fase 9 - Frontend Angular** |
-| Fases completadas | 11 / 12 (Fase 0-8, 10 y 11; Fase 9 pendiente) |
-| Tareas completadas (Fase 11) | 5 / 5 |
-| Tests | 226 / 226 (119 unit + 100 functional + 7 integration SQL Server) |
+| Fase actual | **Fase 12 - Despliegue/Go-Live** |
+| Fases completadas | 12 / 13 (Fases 0-11; Fase 12 pendiente) |
+| Tareas completadas (Fase 9) | 7 / 7 |
+| Tests | Backend 228 (221 unit + functional, 7 integration SQL Server) · Frontend 27 (Vitest) |
 | Estado | En progreso |
 
 ### Progreso global
@@ -64,7 +64,7 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 6 - Help Desk/Solicitudes/SLA | ✅ Completada |
 | 7 - Mantenimientos/Cambios/Compras | ✅ Completada |
 | 8 - Auditoría/Reportes/Dashboard/Config | ✅ Completada |
-| 9 - Frontend Angular | ⬜ Pendiente |
+| 9 - Frontend Angular | ✅ Completada |
 | 10 - Integraciones/Notificaciones/Archivos/Caché | ✅ Completada |
 | 11 - Calidad/Tests/CI-CD | ✅ Completada |
 | 12 - Despliegue/Go-Live | ⬜ Pendiente |
@@ -151,6 +151,9 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 2026-10-05 | Fase 10 | `.gitignore`: carpeta de almacenamiento local (`src/TIAdmin.Api/storage/`) para no versionar archivos cargados | `.gitignore` | — |
 | 2026-10-05 | Fase 10 | +12 tests funcionales. Verificado en SQL Server: worker real de alertas (6 notificaciones, sin duplicados), carga/descarga con SHA-256, exportación xlsx/csv, importación, `/health/ready` con almacenamiento | `Tests/Functional/**` | 219/219 |
 | 2026-10-05 | Fase 11 | Observabilidad (logs con usuario, health JSON), 7 pruebas de integración con Testcontainers, analizadores con 0 advertencias, workflow de CI | `Directory.Build.props`, `.editorconfig`, `.github/workflows/ci.yml`, `Tests/Integration/**` | 226/226 |
+| 2026-10-05 | Fase 9 | SPA `ti-admin-web` (Angular 22, standalone, signals, Angular Material): core (ApiService, AuthService, guards, interceptores), layout con menú por permisos, componentes compartidos y los módulos de la Fase 9 (commit `1151a70`) | `ti-admin-web/**` | Tipos desde `openapi/tiadmin-api.json`; permisos desde `Permissions.cs` |
+| 2026-10-05 | Fase 9 | Backend para la SPA: OpenAPI respeta la nulabilidad de C#; `[FromForm] IFormFile` rompía `/swagger` (test `OpenApiDocumentTests`); limitador `refresh` propio (30/min) para que recargar no choque con el de login; CORS expone `Content-Disposition`; documentos ordenados antes de proyectar (no traducía a SQL) | `Program.cs`, `AssetsController.cs`, `DocumentsController.cs`, `PlatformRepositories.cs` | Verificado: build con `CI=true` y 221 pruebas en verde |
+| 2026-10-05 | Fase 9 | Cierre: detalle de proveedor `/proveedores/:id` (contratos, licencias y documentos; la API ya aceptaba adjuntos de `Vendor` sin pantalla), calendario mensual de mantenimientos (agrupa por fecha en `App.TimeZone`), los errores que no son `ApiResponse` (HTML de un proxy, fallo de parseo) ya no muestran el texto técnico, job `frontend` en CI (permisos sincronizados, tipos, Vitest, build, `npm audit`) y README de la SPA | `vendor-detail/**`, `maintenance-calendar.component.ts`, `api-error.ts`, `ci.yml` | +6 pruebas (27). Pantallas verificadas en Chromium contra API simulada |
 | 2026-10-05 | Fase 5 | +34 tests (22 dominio + 12 funcionales). Verificado en SQL Server: filtros de estado efectivo, alertas, clave cifrada (`CfDJ8…`) sin fugas en auditoría, CHECK `UsedQuantity <= Quantity`, carrera sobre el último puesto | `Tests/**` | 151/151 |
 | 2026-10-05 | Fase 3 | **Verificado contra SQL Server**: login, 401 JSON sin token, CRUD departamentos (padre inexistente 400, ciclo 400, borrar con hijos 409, paginación/orden, soft delete + AuditLog Delete, código reservado 400), `GET /locations` paginado | — | Smoke test manual con curl |
 
@@ -279,7 +282,20 @@ Pendientes / decisiones abiertas:
 - Reportes de historial de movimientos y de auditoría se cubren con `/assets/{id}/movements` y `/audit`
 
 ### Fase 9 - Frontend Angular (Core + Módulos)
-**Estado:** Pending
+**Estado:** ✅ Completada | **Tareas:** 7/7
+
+- [x] 9.1 Estructura: `ti-admin-web/` con `core/`, `shared/`, `layout/`, `features/`; rutas en diferido por feature; environments development/qa/staging/production; SCSS con tokens y tema Material
+- [x] 9.2 Core: modelos generados desde OpenAPI (`npm run api:types`), `ApiService` (desenvuelve `ApiResponse<T>`), `AuthService` con signals (ADR-038), interceptores auth (renovación única ante 401), error (toast con referencia de correlación), correlation id y loading; guards `authGuard`, `guestGuard`, `permissionGuard`, `roleGuard`
+- [x] 9.3 Layout: header (notificaciones, perfil), sidebar con menú por permisos (`navigation.ts`), breadcrumbs, footer, responsive con menú lateral colapsable en móvil
+- [x] 9.4 Shared UI: data table paginada/ordenable, búsqueda, página de catálogo genérica, diálogo de formulario declarativo, confirmación, selector de entidades con búsqueda, panel de documentos, KPI, badges de estado, `*appCan`, pipes `appDate`/`money`/`enumLabel`
+- [x] 9.5 Módulos: login/perfil, dashboard, mis activos, activos (lista, detalle con historial, alta/edición, importación), asignaciones, tickets y solicitudes (lista, alta, detalle con comentarios, historial y transiciones), categorías, SLA, software, proveedores (lista y detalle), licencias (instalaciones, clave auditada), contratos (renovación), mantenimientos (lista y calendario), cambios, compras, usuarios, roles y matriz de permisos, departamentos, ubicaciones, tipos de activo, reportes con exportación, auditoría, configuración, notificaciones
+- [x] 9.6 UX: estados de carga/vacío/error, formularios reactivos con mensajes de la API, toasts y confirmación en acciones destructivas, ARIA en tablas, diálogos y calendario
+- [x] 9.7 Comunicación API: un servicio por feature sobre `ResourceApi`; sin URLs en componentes; paginación y filtros tipados; CI (`frontend`)
+
+Pendientes / decisiones abiertas:
+- Pruebas end-to-end (Playwright) contra la API real en CI: hoy hay pruebas unitarias y verificación manual
+- `openapi/tiadmin-api.json` se actualiza a mano (`npm run api:snapshot` con la API en Development); CI no detecta si quedó desfasado
+- Exportación PDF depende de Q-03
 
 ### Fase 10 - Integraciones/Notificaciones/Archivos/Caché/Import-Export
 **Estado:** ✅ Completada | **Tareas:** 6/6
@@ -355,6 +371,8 @@ Decisiones:
 | ADR-023 | 2026-10-05 | Contratos: solo se persisten Draft/Active/Terminated/Renewed; Expiring/Expired se derivan de `EndDate` y `RenewalNoticeDays`. Renovar crea un contrato sucesor (`RenewedFromContractId`) | Un estado derivado de fechas no queda desactualizado sin un job; el historial del contrato original se conserva | Propuesto |
 | ADR-024 | 2026-10-05 | `IClock.Today` es la fecha de negocio en `App:TimeZone` (America/Managua), no la fecha UTC | Los vencimientos (`DateOnly`) no deben cambiar a las 18:00 hora local | Propuesto |
 | ADR-020 | 2026-10-05 | El rol USER no ve el inventario (`ASSETS.VIEW` retirado); solo sus activos asignados vía `GET /assets/mine`. Bases existentes: migración de datos `RemoveAssetsViewFromUserRole` | Decisión de negocio (Q-10). Por ADR-017, los cambios de matriz para roles existentes requieren migración de datos | Aprobado |
+| ADR-038 | 2026-10-05 | SPA: access token solo en memoria; refresh token rotativo en `sessionStorage` (sobrevive a recargar, no a cerrar la pestaña); el interceptor renueva una sola vez ante varios 401. Permisos del perfil solo para UX (menú, rutas, botones); la API valida siempre | Un XSS no encuentra el access token en almacenamiento; recargar no obliga a iniciar sesión | Propuesto |
+| ADR-039 | 2026-10-05 | Contrato del frontend generado: tipos TypeScript desde el OpenAPI de la API (con nulabilidad de C#) y permisos desde `Permissions.cs`; CI falla si los permisos se desfasan | Una sola fuente de verdad; un cambio de DTO rompe la compilación de la SPA en lugar de fallar en tiempo de ejecución | Propuesto |
 | ADR-017 | 2026-10-05 | El seed aplica la matriz de permisos por defecto solo al crear un rol de sistema; SUPER_ADMIN siempre recibe el catálogo completo | Los cambios hechos vía `/roles` no deben revertirse al reiniciar; permisos nuevos del catálogo llegan a SUPER_ADMIN y se asignan al resto vía API | Propuesto |
 
 ---
@@ -372,10 +390,13 @@ dotnet run --project src/TIAdmin.Api
 
 ### Frontend (Angular)
 ```powershell
-npm start
+cd ti-admin-web
+npm start                      # http://localhost:4200
 npm run build
-npm run lint
-npm run test
+npm run lint:types
+npx ng test --watch=false
+npm run api:types              # tras npm run api:snapshot con la API en Development
+npm run api:permissions        # tras cambiar Permissions.cs
 ```
 
 ### Docker
@@ -408,7 +429,7 @@ git log --oneline -5
 | ID | Pregunta | Propietario |
 |---|---|---|
 | Q-01 | ¿AutoMapper o Mapster? | Equipo técnico |
-| Q-02 | ¿Qué librería UI de Angular? | Equipo frontend |
+| ~~Q-02~~ | ~~¿Qué librería UI de Angular?~~ → Angular Material 22 (sin librerías de terceros) | Resuelto 2026-10-05 |
 | Q-06 | ¿Enums persistidos como `int` o `string`? | Equipo técnico |
 | ~~Q-07~~ | ~~¿`Tickets` y `ServiceRequests` unificados?~~ → Sí, una sola entidad (ADR-025) | Resuelto 2026-10-05 |
 | ~~Q-09~~ | ~~¿Data Protection o Always Encrypted?~~ → Data Protection con anillo protegido por certificado (ADR-021) | Resuelto 2026-10-05 |
@@ -418,8 +439,8 @@ git log --oneline -5
 
 ## 8. Próximos Pasos
 
-1. **Fase 9**: Frontend Angular 22 (`ti-admin-web`) sobre la API completa; agregar su job al workflow de CI
-2. **Fase 12**: despliegue (IIS/Docker), endurecimiento final, documentación de operación. Decisiones abiertas: Q-03 (PDF), Redis para varias instancias
+1. **Fase 12**: despliegue (IIS/Docker), endurecimiento final, documentación de operación. Decisiones abiertas: Q-03 (PDF), Redis para varias instancias
+2. Pruebas end-to-end de la SPA contra la API real (Playwright) y su job de CI
 3. Actualizar esta memoria tras cada cambio significativo
 
 ### Comandos de arranque (dev)
@@ -429,6 +450,7 @@ docker compose up -d sqlserver
 $env:PATH = "C:\Program Files\dotnet;$env:PATH"
 dotnet build .\TIAdmin.slnx
 dotnet run --project src/TIAdmin.Api      # http://localhost:5142 (launchSettings)
+cd ti-admin-web; npm ci; npm start          # http://localhost:4200
 ```
 
 Secretos ya cargados en user-secrets del proyecto `TIAdmin.Api`:
