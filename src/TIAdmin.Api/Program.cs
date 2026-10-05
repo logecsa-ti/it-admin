@@ -207,6 +207,7 @@ builder.Services.AddHealthChecks()
         connectionString: builder.Configuration.GetConnectionString("DefaultConnection") ?? string.Empty,
         name: "database",
         failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy)
+    .AddCheck<StorageHealthCheck>("storage")
     .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("API operativa"),
         tags: ["live"]);
 

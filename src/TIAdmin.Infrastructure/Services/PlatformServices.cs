@@ -2,6 +2,7 @@ namespace TIAdmin.Infrastructure.Services;
 
 using System.Globalization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.EntityFrameworkCore;
 using TIAdmin.Application.Common.Interfaces;
 using TIAdmin.Domain.Entities;
@@ -9,9 +10,18 @@ using TIAdmin.Domain.Enums;
 using TIAdmin.Infrastructure.Persistence;
 
 /// <summary>Lee SystemConfigurations; usa el valor por defecto del seed si falta o es invalido.</summary>
-/// <remarks>Los parametros de tipo Encrypted se descifran al leerse (se guardan con ISecretProtector).</remarks>
-public sealed class SystemSettings(TIAdminDbContext context, ISecretProtector secretProtector) : ISystemSettings
+/// <remarks>
+/// Los parametros de tipo Encrypted se descifran al leerse (se guardan con ISecretProtector). Los valores se
+/// cachean 5 minutos; ConfigurationService invalida la clave al editarla.
+/// </remarks>
+public sealed class SystemSettings(TIAdminDbContext context, ISecretProtector secretProtector, IMemoryCache cache) : ISystemSettings
 {
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+
+    public void Invalidate(string key) => cache.Remove(CacheKey(key));
+
+    private static string CacheKey(string key) => $"settings:{key.ToUpperInvariant()}";
+
     public async Task<int> GetIntAsync(string key, int fallback, CancellationToken cancellationToken = default)
     {
         var value = await GetValueAsync(key, cancellationToken);
@@ -42,6 +52,18 @@ public sealed class SystemSettings(TIAdminDbContext context, ISecretProtector se
     }
 
     private async Task<string?> GetValueAsync(string key, CancellationToken cancellationToken)
+    {
+        if (cache.TryGetValue(CacheKey(key), out string? cached))
+        {
+            return cached;
+        }
+
+        var value = await ReadValueAsync(key, cancellationToken);
+        cache.Set(CacheKey(key), value, CacheTtl);
+        return value;
+    }
+
+    private async Task<string?> ReadValueAsync(string key, CancellationToken cancellationToken)
     {
         var row = await context.SystemConfigurations
             .AsNoTracking()

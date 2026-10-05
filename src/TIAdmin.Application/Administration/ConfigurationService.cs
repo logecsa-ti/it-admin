@@ -28,6 +28,7 @@ public interface IConfigurationService
 public sealed partial class ConfigurationService(
     IUnitOfWork unitOfWork,
     ISecretProtector secretProtector,
+    ISystemSettings settings,
     IClock clock)
     : IConfigurationService
 {
@@ -67,6 +68,7 @@ public sealed partial class ConfigurationService(
         item.Value = Validate(item, value);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        settings.Invalidate(item.Key);
         return ToDto(item);
     }
 
@@ -78,6 +80,7 @@ public sealed partial class ConfigurationService(
             : item.DefaultValue;
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        settings.Invalidate(item.Key);
         return ToDto(item);
     }
 
@@ -154,7 +157,7 @@ public sealed partial class ConfigurationService(
             throw Invalid(item, "debe estar entre 0 y 100");
         }
 
-        if ((key == "Alerts.Maintenance.Days" || key.StartsWith("Sla.Default.", StringComparison.OrdinalIgnoreCase))
+        if ((key is "Alerts.Maintenance.Days" or "Exports.AsyncThreshold" || key.StartsWith("Sla.Default.", StringComparison.OrdinalIgnoreCase))
             && int.Parse(value, CultureInfo.InvariantCulture) <= 0)
         {
             throw Invalid(item, "debe ser mayor que cero");

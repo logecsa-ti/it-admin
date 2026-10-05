@@ -4,6 +4,7 @@ using TIAdmin.Application.Common;
 using TIAdmin.Application.Common.Constants;
 using TIAdmin.Application.Common.Interfaces;
 using TIAdmin.Application.Common.Models;
+using TIAdmin.Application.Platform;
 using TIAdmin.Domain.Entities;
 using TIAdmin.Domain.Enums;
 using TIAdmin.Domain.Exceptions;
@@ -45,7 +46,8 @@ public sealed class TicketService(
     IUserDirectory userDirectory,
     IPermissionService permissionService,
     ISystemSettings settings,
-    IClock clock)
+    IClock clock,
+    INotificationService notifications)
     : ITicketService
 {
     public const string NumberPrefixKey = "Tickets.NumberPrefix";
@@ -133,6 +135,12 @@ public sealed class TicketService(
         ticket.TicketNumber = await DocumentNumbers.FormatAsync(settings, clock, NumberPrefixKey, "TKT", ticket.Id, now, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
+        if (ticket.IsAwaitingApproval)
+        {
+            await notifications.NotifyPermissionAsync(Permissions.RequestsApprove, TicketNotice(ticket, [], "TicketApprovalRequired",
+                $"Solicitud {ticket.TicketNumber} pendiente de aprobacion", ticket.Title), cancellationToken);
+        }
+
         return await GetAsync(ticket.Id, cancellationToken);
     }
 
@@ -213,6 +221,12 @@ public sealed class TicketService(
 
         await unitOfWork.Tickets.AddHistoryAsync(history, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        if (request.Status is TicketStatus.WaitingUser or TicketStatus.Resolved or TicketStatus.Cancelled)
+        {
+            await notifications.NotifyAsync(TicketNotice(ticket, [ticket.RequesterId], "TicketStatusChanged",
+                $"Ticket {ticket.TicketNumber}: {request.Status}", request.Comment ?? request.ResolutionNotes ?? ticket.Title), cancellationToken);
+        }
+
         return await GetAsync(id, cancellationToken);
     }
 
@@ -239,6 +253,8 @@ public sealed class TicketService(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifications.NotifyAsync(TicketNotice(ticket, [request.AssignedToId], "TicketAssigned",
+            $"Ticket {ticket.TicketNumber} asignado", $"{ticket.Title} (prioridad {ticket.Priority})"), cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
 
@@ -254,6 +270,8 @@ public sealed class TicketService(
 
         await unitOfWork.Tickets.AddHistoryAsync(history, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifications.NotifyAsync(TicketNotice(ticket, [ticket.RequesterId], "TicketApproved",
+            $"Solicitud {ticket.TicketNumber} aprobada", ticket.Title), cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
 
@@ -266,6 +284,8 @@ public sealed class TicketService(
 
         await unitOfWork.Tickets.AddHistoryAsync(history, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifications.NotifyAsync(TicketNotice(ticket, [ticket.RequesterId], "TicketRejected",
+            $"Solicitud {ticket.TicketNumber} rechazada", ticket.ApprovalComment ?? ticket.Title), cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
 
@@ -318,6 +338,17 @@ public sealed class TicketService(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        if (!request.IsInternal)
+        {
+            // Comentario publico: avisa a la otra parte (agente → solicitante, solicitante → responsable).
+            var recipient = isRequester ? ticket.AssignedToId : ticket.RequesterId;
+            if (recipient is { } recipientId)
+            {
+                await notifications.NotifyAsync(TicketNotice(ticket, [recipientId], "TicketComment",
+                    $"Nuevo comentario en {ticket.TicketNumber}", request.Content), cancellationToken);
+            }
+        }
+
         return await unitOfWork.Tickets.GetCommentsAsync(id, CanViewAll(ticket.Type), cancellationToken);
     }
 
@@ -399,6 +430,9 @@ public sealed class TicketService(
             BusinessHours.AddWorkingMinutes(startUtc, responseMinutes, schedule, clock.TimeZone),
             BusinessHours.AddWorkingMinutes(startUtc, resolutionMinutes, schedule, clock.TimeZone));
     }
+
+    private NotificationRequest TicketNotice(Ticket ticket, IReadOnlyCollection<int> userIds, string type, string title, string message) =>
+        new(userIds, type, title, message, "Ticket", ticket.Id, $"/tickets/{ticket.Id}", ExcludeUserId: currentUser.UserId);
 
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

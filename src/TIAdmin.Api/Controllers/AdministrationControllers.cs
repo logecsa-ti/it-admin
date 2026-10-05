@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TIAdmin.Application.Administration;
 using TIAdmin.Application.Common.Models;
+using TIAdmin.Application.Platform;
 using TIAdmin.Application.Reporting;
 using TIAdmin.Domain.Enums;
 using Perms = TIAdmin.Application.Common.Constants.Permissions;
@@ -58,7 +59,7 @@ public sealed class DashboardController(IDashboardService dashboard) : Controlle
 [Route("api/v1/reports")]
 [Authorize(Policy = Perms.ReportsView)]
 [Produces("application/json")]
-public sealed class ReportsController(IReportService reports) : ControllerBase
+public sealed class ReportsController(IReportService reports, IExportService exports) : ControllerBase
 {
     [HttpGet("assets/summary")]
     public async Task<ActionResult<ApiResponse<AssetSummaryReport>>> AssetSummary(CancellationToken cancellationToken) =>
@@ -84,6 +85,37 @@ public sealed class ReportsController(IReportService reports) : ControllerBase
     [HttpGet("costs")]
     public async Task<ActionResult<ApiResponse<CostReport>>> Costs([FromQuery] DateOnly? from, [FromQuery] DateOnly? to, CancellationToken cancellationToken) =>
         Ok(ApiResponse<CostReport>.Ok(await reports.GetCostReportAsync(from, to, cancellationToken)));
+
+    /// <summary>
+    /// Exporta un reporte (assets, tickets, audit, assets-by-user, licenses, costs, sla) a csv o xlsx con los mismos
+    /// filtros que su consulta. Si supera Exports.AsyncThreshold filas responde 202 con el trabajo encolado.
+    /// </summary>
+    [HttpGet("{report}/export")]
+    [Authorize(Policy = Perms.ReportsExport)]
+    public async Task<IActionResult> Export(string report, [FromQuery] string format, CancellationToken cancellationToken)
+    {
+        var parameters = Request.Query
+            .Where(q => !string.Equals(q.Key, "format", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(q => q.Key, q => (string?)q.Value.ToString(), StringComparer.OrdinalIgnoreCase);
+
+        var result = await exports.ExportAsync(report, format, parameters, cancellationToken);
+        return result.File is { } file
+            ? File(file.Content, file.MimeType, file.FileName)
+            : Accepted(ApiResponse<ExportJobDto>.Ok(result.Job!, "La exportacion se procesara en segundo plano; recibira una notificacion."));
+    }
+
+    [HttpGet("exports/{id:int}")]
+    [Authorize(Policy = Perms.ReportsExport)]
+    public async Task<ActionResult<ApiResponse<ExportJobDto>>> GetExport(int id, CancellationToken cancellationToken) =>
+        Ok(ApiResponse<ExportJobDto>.Ok(await exports.GetJobAsync(id, cancellationToken)));
+
+    [HttpGet("exports/{id:int}/download")]
+    [Authorize(Policy = Perms.ReportsExport)]
+    public async Task<IActionResult> DownloadExport(int id, CancellationToken cancellationToken)
+    {
+        var file = await exports.DownloadJobAsync(id, cancellationToken);
+        return File(file.Content, file.MimeType, file.FileName);
+    }
 }
 
 [ApiController]

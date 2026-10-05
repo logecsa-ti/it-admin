@@ -7,6 +7,7 @@ using TIAdmin.Application.Assets;
 using TIAdmin.Application.HelpDesk;
 using TIAdmin.Application.Licensing;
 using TIAdmin.Application.Operations;
+using TIAdmin.Application.Platform;
 using TIAdmin.Application.Reporting;
 using TIAdmin.Application.Vendors;
 
@@ -17,6 +18,7 @@ public static class DependencyInjection
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.AddSingleton<CatalogCache>();
         services.AddScoped<AssetMovementLog>();
         services.AddScoped<IAssetService, AssetService>();
         services.AddScoped<IVendorService, VendorService>();
@@ -32,6 +34,11 @@ public static class DependencyInjection
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IAuditQueryService, AuditQueryService>();
         services.AddScoped<IConfigurationService, ConfigurationService>();
+        services.AddScoped<IDocumentService, DocumentService>();
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IAlertNotificationJob, AlertNotificationJob>();
+        services.AddScoped<IExportService, ExportService>();
+        services.AddScoped<IAssetImportService, AssetImportService>();
 
         return services;
     }

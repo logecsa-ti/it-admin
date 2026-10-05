@@ -29,6 +29,8 @@ public interface ISlaPolicyRepository : IRepository<SlaPolicy>
 /// </summary>
 public record TicketScope(int UserId, bool AllIncidents, bool AllServiceRequests);
 
+public record SlaBreachRow(int Id, string TicketNumber, string Title, int? AssignedToId, bool ResponseBreached, bool ResolutionBreached);
+
 public interface ITicketRepository : IRepository<Ticket>
 {
     Task<PagedResult<TicketListItemDto>> SearchAsync(
@@ -47,4 +49,7 @@ public interface ITicketRepository : IRepository<Ticket>
     Task<IReadOnlyList<TicketCommentDto>> GetCommentsAsync(int ticketId, bool includeInternal, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<TicketHistoryDto>> GetHistoryAsync(int ticketId, CancellationToken cancellationToken = default);
+
+    /// <summary>Tickets abiertos con el SLA de respuesta o de resolucion vencido.</summary>
+    Task<IReadOnlyList<SlaBreachRow>> GetOpenSlaBreachesAsync(DateTime now, CancellationToken cancellationToken = default);
 }

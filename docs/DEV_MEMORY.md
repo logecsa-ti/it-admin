@@ -5,7 +5,7 @@
 **Fecha de inicio:** 2026-10-02
 **Última actualización:** 2026-10-05
 **Estado general:** En progreso
-**Fase actual:** Fase 9 - Frontend Angular (Fase 8 completada; backend funcional completo)
+**Fase actual:** Fase 11 - Calidad/Observabilidad/CI (Fase 10 completada; Fase 9 frontend pendiente)
 
 ---
 
@@ -45,10 +45,10 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 
 | Métrica | Valor |
 |---|---|
-| Fase actual | **Fase 9 - Frontend Angular** |
-| Fases completadas | 9 / 12 (Fase 0-8) |
-| Tareas completadas (Fase 8) | 4 / 4 |
-| Tests | 207 / 207 (119 unit + 88 functional) |
+| Fase actual | **Fase 11 - Calidad/Observabilidad/CI** |
+| Fases completadas | 10 / 12 (Fase 0-8 y 10; Fase 9 pendiente) |
+| Tareas completadas (Fase 10) | 6 / 6 |
+| Tests | 219 / 219 (119 unit + 100 functional) |
 | Estado | En progreso |
 
 ### Progreso global
@@ -65,7 +65,7 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 7 - Mantenimientos/Cambios/Compras | ✅ Completada |
 | 8 - Auditoría/Reportes/Dashboard/Config | ✅ Completada |
 | 9 - Frontend Angular | ⬜ Pendiente |
-| 10 - Integraciones/Notificaciones/Archivos/Caché | ⬜ Pendiente |
+| 10 - Integraciones/Notificaciones/Archivos/Caché | ✅ Completada |
 | 11 - Calidad/Tests/CI-CD | ⬜ Pendiente |
 | 12 - Despliegue/Go-Live | ⬜ Pendiente |
 
@@ -146,6 +146,10 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 2026-10-05 | Fase 8 | `IReportingQueries` (agregados en SQL, nombres por lookup) + `DashboardService`, `ReportService`, `AuditQueryService`, `ConfigurationService`; endpoints `/audit`, `/dashboard/summary`, `/reports/*`, `/configuration` | `Application/{Reporting,Administration}/**`, `Infrastructure/Reporting/**`, `Api/Controllers/AdministrationControllers.cs` | ADR-032, ADR-033 |
 | 2026-10-05 | Fase 8 | `ISystemSettings` descifra parámetros `Encrypted`; el seed deja `Value` nulo para claves cifradas (el por defecto aplica hasta editarse) | `PlatformServices.cs`, `DatabaseSeeder.cs` | — |
 | 2026-10-05 | Fase 8 | +5 tests funcionales (auditoría, dashboard por permisos, reportes, configuración con efecto real en la numeración, parámetro cifrado). Verificado en SQL Server: 11 endpoints, sin excepciones; dashboard 80 ms | `Tests/Functional/AdministrationEndpointsTests.cs` | 207/207. Sin cambios de esquema |
+| 2026-10-05 | Fase 10 | Documentos, notificaciones, scheduler, caché, exportación e importación (ver sección de la fase). Migración `AddDocumentsNotificationsExports` aplicada. Paquete ClosedXML 0.105.1 | `Application/Platform/**`, `Infrastructure/Services/**`, controllers | ADR-034..037 |
+| 2026-10-05 | Fase 10 | **Corrección de permisos detectada por test**: el solicitante podía borrar documentos que un agente adjuntó a su ticket | `DocumentService.cs` | — |
+| 2026-10-05 | Fase 10 | `.gitignore`: carpeta de almacenamiento local (`src/TIAdmin.Api/storage/`) para no versionar archivos cargados | `.gitignore` | — |
+| 2026-10-05 | Fase 10 | +12 tests funcionales. Verificado en SQL Server: worker real de alertas (6 notificaciones, sin duplicados), carga/descarga con SHA-256, exportación xlsx/csv, importación, `/health/ready` con almacenamiento | `Tests/Functional/**` | 219/219 |
 | 2026-10-05 | Fase 5 | +34 tests (22 dominio + 12 funcionales). Verificado en SQL Server: filtros de estado efectivo, alertas, clave cifrada (`CfDJ8…`) sin fugas en auditoría, CHECK `UsedQuantity <= Quantity`, carrera sobre el último puesto | `Tests/**` | 151/151 |
 | 2026-10-05 | Fase 3 | **Verificado contra SQL Server**: login, 401 JSON sin token, CRUD departamentos (padre inexistente 400, ciclo 400, borrar con hijos 409, paginación/orden, soft delete + AuditLog Delete, código reservado 400), `GET /locations` paginado | — | Smoke test manual con curl |
 
@@ -277,7 +281,20 @@ Pendientes / decisiones abiertas:
 **Estado:** Pending
 
 ### Fase 10 - Integraciones/Notificaciones/Archivos/Caché/Import-Export
-**Estado:** Pending
+**Estado:** ✅ Completada | **Tareas:** 6/6
+
+- [x] 10.1 Documentos (`/documents`): `IFileStorage` local (rutas confinadas a `Storage:RootPath`, nombre en disco generado, SHA-256), solo metadata en BD, extensión/tamaño validados, MIME derivado de la extensión, baja lógica que conserva el archivo; acceso según la entidad dueña (ADR-034); health check de almacenamiento
+- [x] 10.2 Notificaciones (`/notifications`): internas + correo por cola en segundo plano (SMTP o log si `Email:Enabled=false`); eventos de tickets, aprobaciones de solicitudes, cambios y compras; quien provoca el evento no se notifica; un fallo nunca afecta la operación de negocio (ADR-035)
+- [x] 10.3 Scheduler (`AlertScanWorker`, Q-04: BackgroundService): barrido cada `Jobs:AlertScanIntervalMinutes` de contratos, licencias, mantenimientos y SLA vencidos; deduplicación por índice único (usuario, clave). Verificado en SQL Server con el worker real
+- [x] 10.4 Caché: `ISystemSettings` (5 min, invalidación al editar) y catálogos (`CatalogCache`: categorías de ticket, tipos de activo)
+- [x] 10.5 Exportación CSV/Excel (`/reports/{report}/export`): permiso REPORTS.EXPORT + permiso del módulo; asíncrona por encima de `Exports.AsyncThreshold` con trabajo, notificación y descarga (ADR-036); neutralización de fórmulas (inyección CSV)
+- [x] 10.6 Importación de activos (`/assets/import`, plantilla `/assets/import/template`): CSV/Excel, validación completa y todo o nada, `dryRun` (ADR-037)
+
+Pendientes / decisiones abiertas:
+- PDF: Q-03 (QuestPDF vs DinkToPdf) sigue abierta
+- Importación de usuarios, software, licencias y proveedores (solo activos implementado)
+- Redis (`Cache:Provider=redis`) no implementado: la caché es por instancia
+- Con varias instancias, la cola de correos/exportaciones es en memoria por instancia (las exportaciones pendientes se reencolan al reiniciar)
 
 ### Fase 11 - Calidad/Pruebas/CI-CD/Observabilidad
 **Estado:** Pending
@@ -309,6 +326,10 @@ Pendientes / decisiones abiertas:
 | ADR-016 | 2026-10-05 | Los usuarios no se eliminan: se desactivan (`USERS.DISABLE`) y se revocan sus refresh tokens. Asignar roles/permisos exige `ROLES.MANAGE` | Conserva historial (asignaciones, tickets, auditoría); asignar roles es escalar privilegios | Propuesto |
 | ADR-018 | 2026-10-05 | Reglas de estado del activo en la entidad de dominio (`Asset.AssignTo/Return/ChangeStatus`, setters privados); orquestación en un servicio de Application (`AssetService`) | Clean Architecture (CONVENTIONS §1.3): reglas testeables sin BD; los controllers quedan delgados. Patrón para flujos con varias entidades | Propuesto |
 | ADR-019 | 2026-10-05 | Convención EF `UtcDateTimeConverter` para todo `DateTime`: se lee con `Kind=Utc` | ADR-005; JSON con `Z` para que el frontend convierta a la zona configurada | Propuesto |
+| ADR-034 | 2026-10-05 | Acceso a documentos según la entidad dueña: ver = permiso de lectura de la entidad; cargar/eliminar = permiso de gestión de la entidad o DOCUMENTS.MANAGE; el solicitante adjunta en su ticket y solo elimina lo que él cargó | El rol USER no tiene DOCUMENTS.*, pero debe poder adjuntar a sus tickets; evita duplicar la matriz de permisos por documento | Propuesto |
+| ADR-035 | 2026-10-05 | Notificaciones fuera del camino crítico: se registran tras guardar la operación y los errores se descartan con log; el correo va por cola en memoria a un worker | Un SMTP caído o una carrera de deduplicación no debe deshacer ni fallar la operación de negocio | Propuesto |
+| ADR-036 | 2026-10-05 | Exportaciones: síncronas hasta `Exports.AsyncThreshold` filas, asíncronas por encima (ExportJobs + archivo en IFileStorage + notificación); solo el solicitante ve/descarga su trabajo | Cumple "exportaciones grandes asíncronas" sin bloquear la API | Propuesto |
+| ADR-037 | 2026-10-05 | Importación todo o nada con `dryRun`: si una fila falla no se importa ninguna; códigos y series se validan contra la base y contra el propio archivo con consultas masivas | La migración de inventario debe ser reproducible y sin cargas parciales | Propuesto |
 | ADR-032 | 2026-10-05 | Dashboard sensible a permisos: cada sección (activos, tickets, licencias, contratos, mantenimiento, costos) requiere el permiso de su módulo (costos: REPORTS.VIEW); todos ven "mis datos" | DASHBOARD.VIEW lo tiene el rol USER; no debe revelar lo que Q-10 / ADR-026 ocultan | Propuesto |
 | ADR-033 | 2026-10-05 | `App.TimeZone`, `App.PageSize`, `App.MaxPageSize` son de solo lectura vía API: su valor efectivo viene de appsettings (`AppOptions`, `PagedQuery`). `/configuration/public` devuelve la zona efectiva | Evita una segunda fuente de verdad que no surtiría efecto | Propuesto |
 | ADR-030 | 2026-10-05 | Segregación de funciones: quien solicita un cambio o una compra no puede aprobarlo ni rechazarlo (también con permisos de revisión). Cambios estándar quedan preaprobados al enviarse (ITIL) | Control interno; evita autoaprobación | Propuesto |
@@ -386,8 +407,8 @@ git log --oneline -5
 
 ## 8. Próximos Pasos
 
-1. **Fase 9**: Frontend Angular 22 (`ti-admin-web`): core (auth con JWT + refresh, interceptores, guards por permiso), layout con menú dinámico, componentes compartidos y módulos funcionales sobre la API ya disponible
-2. Alternativa antes del frontend: Fase 10 (exportación, notificaciones, archivos, scheduler) y Fase 11 (CI/CD, Testcontainers) completarían el backend
+1. **Fase 11**: logging (duplicado de consola, enriquecimiento con usuario), health checks detallados, tests de integración con Testcontainers, analizadores, CI (GitHub Actions)
+2. **Fase 9**: Frontend Angular 22 (`ti-admin-web`) sobre la API completa
 3. Actualizar esta memoria tras cada cambio significativo
 
 ### Comandos de arranque (dev)

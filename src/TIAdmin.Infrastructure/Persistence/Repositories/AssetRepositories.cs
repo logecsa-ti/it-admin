@@ -26,6 +26,14 @@ public class AssetRepository : BaseRepository<Asset>, IAssetRepository
             a => a.SerialNumber == serialNumber && (excludeId == null || a.Id != excludeId),
             cancellationToken);
 
+    public async Task<HashSet<string>> GetExistingAssetCodesAsync(IReadOnlyCollection<string> codes, CancellationToken cancellationToken = default) =>
+        (await Set.IgnoreQueryFilters().Where(a => codes.Contains(a.AssetCode)).Select(a => a.AssetCode).ToListAsync(cancellationToken))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    public async Task<HashSet<string>> GetExistingSerialNumbersAsync(IReadOnlyCollection<string> serialNumbers, CancellationToken cancellationToken = default) =>
+        (await Set.IgnoreQueryFilters().Where(a => a.SerialNumber != null && serialNumbers.Contains(a.SerialNumber)).Select(a => a.SerialNumber!).ToListAsync(cancellationToken))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
     public async Task<PagedResult<AssetListItemDto>> SearchAsync(
         PagedQuery query,
         AssetFilter filter,

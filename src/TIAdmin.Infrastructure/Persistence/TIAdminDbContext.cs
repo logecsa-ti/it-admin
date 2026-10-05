@@ -65,6 +65,12 @@ public class TIAdminDbContext : IdentityDbContext<ApplicationUser, ApplicationRo
 
     public DbSet<Domain.Entities.PurchaseItem> PurchaseItems => Set<Domain.Entities.PurchaseItem>();
 
+    public DbSet<Domain.Entities.Document> Documents => Set<Domain.Entities.Document>();
+
+    public DbSet<Domain.Entities.Notification> Notifications => Set<Domain.Entities.Notification>();
+
+    public DbSet<Domain.Entities.ExportJob> ExportJobs => Set<Domain.Entities.ExportJob>();
+
     public DbSet<ApplicationPermission> Permissions => Set<ApplicationPermission>();
 
     public DbSet<ApplicationRolePermission> RolePermissions => Set<ApplicationRolePermission>();

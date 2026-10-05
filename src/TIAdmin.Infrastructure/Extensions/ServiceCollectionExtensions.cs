@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
                 + "Defina ConnectionStrings:DefaultConnection o la variable de entorno ConnectionStrings__DefaultConnection.");
 
         services.AddSingleton<IClock, SystemClock>();
+        services.AddMemoryCache();
 
         services.AddScoped<AuditSaveChangesInterceptor>();
         services.AddScoped<AuditTrailInterceptor>();
@@ -63,6 +64,28 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISystemSettings, SystemSettings>();
         services.AddScoped<IAuditLogger, AuditLogger>();
         services.AddScoped<IReportingQueries, Reporting.ReportingQueries>();
+        services.AddSingleton<IFileStorage, LocalFileStorage>();
+
+        services.AddSingleton<EmailQueue>();
+        services.AddSingleton<IEmailQueue>(provider => provider.GetRequiredService<EmailQueue>());
+        if (configuration.GetValue<bool>("Email:Enabled"))
+        {
+            services.AddSingleton<IEmailSender, SmtpEmailSender>();
+        }
+        else
+        {
+            services.AddSingleton<IEmailSender, LoggingEmailSender>();
+        }
+
+        services.AddHostedService<EmailDispatchWorker>();
+        services.AddHostedService<AlertScanWorker>();
+
+        services.AddSingleton<TabularFiles>();
+        services.AddSingleton<ITabularFileWriter>(provider => provider.GetRequiredService<TabularFiles>());
+        services.AddSingleton<ITabularFileReader>(provider => provider.GetRequiredService<TabularFiles>());
+        services.AddSingleton<ExportQueue>();
+        services.AddSingleton<IExportQueue>(provider => provider.GetRequiredService<ExportQueue>());
+        services.AddHostedService<ExportWorker>();
 
         AddSecretProtection(services, configuration);
 

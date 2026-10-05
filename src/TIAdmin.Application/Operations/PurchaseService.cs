@@ -4,6 +4,7 @@ using TIAdmin.Application.Common;
 using TIAdmin.Application.Common.Constants;
 using TIAdmin.Application.Common.Interfaces;
 using TIAdmin.Application.Common.Models;
+using TIAdmin.Application.Platform;
 using TIAdmin.Domain.Entities;
 using TIAdmin.Domain.Enums;
 using TIAdmin.Domain.Exceptions;
@@ -39,7 +40,8 @@ public sealed class PurchaseService(
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser,
     ISystemSettings settings,
-    IClock clock)
+    IClock clock,
+    INotificationService notifications)
     : IPurchaseService
 {
     public const string NumberPrefixKey = "Purchases.NumberPrefix";
@@ -86,18 +88,32 @@ public sealed class PurchaseService(
         return await GetAsync(id, cancellationToken);
     }
 
-    public Task<PurchaseRequestDto> SubmitAsync(int id, CancellationToken cancellationToken = default) =>
-        MutateAsync(id, purchase =>
+    public async Task<PurchaseRequestDto> SubmitAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var dto = await MutateAsync(id, purchase =>
         {
             EnsureRequesterOrManager(purchase);
             purchase.Submit();
         }, cancellationToken);
 
-    public Task<PurchaseRequestDto> ApproveAsync(int id, CancellationToken cancellationToken = default) =>
-        MutateAsync(id, purchase => purchase.Approve(Me, clock.UtcNow), cancellationToken);
+        await notifications.NotifyPermissionAsync(Permissions.PurchasesApprove,
+            PurchaseNotice(dto, [], "PurchaseApprovalRequired", $"Compra {dto.Number} pendiente de aprobacion"), cancellationToken);
+        return dto;
+    }
 
-    public Task<PurchaseRequestDto> RejectAsync(int id, string reason, CancellationToken cancellationToken = default) =>
-        MutateAsync(id, purchase => purchase.Reject(Me, clock.UtcNow, reason.Trim()), cancellationToken);
+    public async Task<PurchaseRequestDto> ApproveAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var dto = await MutateAsync(id, purchase => purchase.Approve(Me, clock.UtcNow), cancellationToken);
+        await notifications.NotifyAsync(PurchaseNotice(dto, [dto.RequestedById], "PurchaseApproved", $"Compra {dto.Number} aprobada"), cancellationToken);
+        return dto;
+    }
+
+    public async Task<PurchaseRequestDto> RejectAsync(int id, string reason, CancellationToken cancellationToken = default)
+    {
+        var dto = await MutateAsync(id, purchase => purchase.Reject(Me, clock.UtcNow, reason.Trim()), cancellationToken);
+        await notifications.NotifyAsync(PurchaseNotice(dto, [dto.RequestedById], "PurchaseRejected", $"Compra {dto.Number} rechazada"), cancellationToken);
+        return dto;
+    }
 
     public Task<PurchaseRequestDto> MarkOrderedAsync(int id, CancellationToken cancellationToken = default) =>
         MutateAsync(id, purchase => purchase.MarkOrdered(clock.UtcNow), cancellationToken);
@@ -184,6 +200,10 @@ public sealed class PurchaseService(
             Notes = Normalize(i.Notes)
         }));
     }
+
+    private NotificationRequest PurchaseNotice(PurchaseRequestDto purchase, IReadOnlyCollection<int> userIds, string type, string title) =>
+        new(userIds, type, title, $"{purchase.Title} ({purchase.EstimatedCost:N2})", "PurchaseRequest", purchase.Id, $"/purchases/{purchase.Id}",
+            ExcludeUserId: currentUser.UserId);
 
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

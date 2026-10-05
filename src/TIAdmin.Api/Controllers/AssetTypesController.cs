@@ -2,6 +2,7 @@ namespace TIAdmin.Api.Controllers;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TIAdmin.Application.Common;
 using TIAdmin.Application.Common.Interfaces;
 using TIAdmin.Application.Common.Models;
 using TIAdmin.Application.Validators;
@@ -16,14 +17,17 @@ using Perms = TIAdmin.Application.Common.Constants.Permissions;
 [Route("api/v1/asset-types")]
 [Authorize]
 [Produces("application/json")]
-public sealed class AssetTypesController(IUnitOfWork unitOfWork) : ControllerBase
+public sealed class AssetTypesController(IUnitOfWork unitOfWork, CatalogCache cache) : ControllerBase
 {
+    private const string Catalog = "asset-types";
+
     [HttpGet]
     [Authorize(Policy = Perms.AssetsView)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<AssetTypeDto>>>> GetAll(
         [FromQuery] bool? isActive,
         CancellationToken cancellationToken) =>
-        Ok(ApiResponse<IReadOnlyList<AssetTypeDto>>.Ok(await unitOfWork.AssetTypes.ListAsync(isActive, cancellationToken)));
+        Ok(ApiResponse<IReadOnlyList<AssetTypeDto>>.Ok(await cache.GetOrCreateAsync(Catalog, isActive?.ToString() ?? "all",
+            () => unitOfWork.AssetTypes.ListAsync(isActive, cancellationToken))));
 
     [HttpGet("{id:int}")]
     [Authorize(Policy = Perms.AssetsView)]
@@ -69,6 +73,7 @@ public sealed class AssetTypesController(IUnitOfWork unitOfWork) : ControllerBas
 
         await unitOfWork.AssetTypes.AddAsync(type, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        cache.Invalidate(Catalog);
 
         return CreatedAtAction(nameof(GetById), new { id = type.Id }, ApiResponse<AssetTypeDto>.Ok(ToDto(type)));
     }
@@ -105,6 +110,7 @@ public sealed class AssetTypesController(IUnitOfWork unitOfWork) : ControllerBas
 
         unitOfWork.AssetTypes.Update(type);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        cache.Invalidate(Catalog);
 
         return Ok(ApiResponse<AssetTypeDto>.Ok(ToDto(type)));
     }

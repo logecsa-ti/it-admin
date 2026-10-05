@@ -229,12 +229,14 @@ public sealed class TicketsEndpointsTests(TIAdminApiFactory factory) : IClassFix
         var created = await Post<CategoryData>(admin, "/api/v1/ticket-categories", NewCategory(code));
         var duplicate = await admin.PostAsJsonAsync("/api/v1/ticket-categories", NewCategory(code));
         var changeType = await admin.PutAsJsonAsync($"/api/v1/ticket-categories/{created.Id}", NewCategory(code) with { Type = "ServiceRequest" });
+        var listAfterCreate = await Get<List<CategoryData>>(requester.Client, "/api/v1/ticket-categories?isActive=true");
 
         list.Select(c => c.Code).Should().Contain(["HARDWARE", "REQ_EQUIPMENT"]);
         userCreate.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         created.Code.Should().Be(code);
         (await ErrorCode(duplicate, HttpStatusCode.Conflict)).Should().Be("CATEGORY_CODE_ALREADY_EXISTS");
         (await ErrorCode(changeType, HttpStatusCode.BadRequest)).Should().Be("CATEGORY_TYPE_IMMUTABLE");
+        listAfterCreate.Should().Contain(c => c.Code == code, "crear una categoria invalida la cache del catalogo");
     }
 
     private async Task<TestUser> CreateUserAsync(string role)

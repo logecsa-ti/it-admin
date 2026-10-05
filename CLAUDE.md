@@ -20,6 +20,12 @@ dotnet build .\TIAdmin.slnx
 dotnet test .\TIAdmin.slnx
 dotnet test .\TIAdmin.slnx --filter "FullyQualifiedName~PermissionsTests"           # one class
 dotnet test .\TIAdmin.slnx --filter "FullyQualifiedName~PermissionsTests.AllPermissions_ShouldHaveUniqueCodes"  # one test
+dotnet test .\TIAdmin.slnx --filter "Category=Integration"   # SQL Server 2022 via Testcontainers (needs Docker)
+dotnet test .\TIAdmin.slnx --filter "Category!=Integration"  # fast suite (EF InMemory)
+# Integration tests ([DockerFact]) skip automatically without Docker or with TIADMIN_SKIP_DOCKER_TESTS=true.
+# Analyzers run in the build (Directory.Build.props, AnalysisLevel=latest-recommended); CI sets CI=true, so
+# any warning fails the build. Keep the build at 0 warnings; justify rule suppressions in .editorconfig.
+# Test against SQL Server (Integration) whenever you add LINQ queries: InMemory does not catch untranslatable LINQ.
 dotnet run --project src/TIAdmin.Api           # http://localhost:5142, Swagger at /swagger (Development only)
 
 dotnet ef migrations add <Name> --project src/TIAdmin.Infrastructure --startup-project src/TIAdmin.Api
@@ -74,6 +80,12 @@ Users are deactivated, never deleted. Assigning roles or direct permissions requ
 - **Configurable thresholds**: read `SystemConfigurations` through `ISystemSettings` (e.g. `Alerts.Contract.Days` = "90,60,30,15,7"). New keys go into `DatabaseSeeder.SeedConfigurationsAsync`, which inserts missing keys into existing databases too.
 - **Configuration API**: `ConfigurationService` validates by `DataType` plus per-key rules (`ApplyKeyRules`, which also normalizes the value). Add a rule there when seeding a key with constraints. `Encrypted` values are stored via `ISecretProtector`, masked in responses, and decrypted by `ISystemSettings`. Keys whose effective value comes from appsettings (`App.TimeZone`, paging) are read-only by API.
 - **Dashboard and reports**: aggregates live in `Infrastructure/Reporting/ReportingQueries.cs` (counts and sums in SQL, names by separate lookup, averages over date differences in memory because `DATEDIFF` is SQL Server-only and tests use InMemory). Dashboard sections are null unless the user has that module's permission.
+- **Files, notifications, background work** (`Application/Platform`, `Infrastructure/Services`):
+  - **Documents:** stored via `IFileStorage` (local root `Storage:RootPath`, paths confined to it, generated names, SHA-256). Access follows the owning entity's permissions (`DocumentService.Rules`); add an entry there when a new entity accepts attachments.
+  - **Notifications:** go through `INotificationService` *after* the business save. They never throw, and the actor is excluded via `ExcludeUserId`. Periodic alerts pass a `DedupKey` (unique index per user). Email goes through `IEmailQueue` (logged instead of sent when `Email:Enabled=false`).
+  - **Background services:** `EmailDispatchWorker`, `ExportWorker` and `AlertScanWorker` (disable the last with `Jobs:Enabled=false`; functional tests do and run `IAlertNotificationJob` directly).
+  - **Exports:** `ExportService.Definitions` (report → module permission + builder). Above `Exports.AsyncThreshold` rows an export becomes an `ExportJob`.
+  - **Catalog cache:** `CatalogCache` with `Invalidate(catalog)` on writes.
 - **FKs to users**: Domain entities hold plain `int` user ids. The FK to `Users` is declared only in the Fluent config, via `builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(...)` with `Restrict`.
 - **Table names**: set explicitly and in plural in each `IEntityTypeConfiguration` (ADR-009). Don't rely on conventions.
 - **Authentication**: JWT only. `AddIdentity` registers Identity's cookie as the default authenticate/challenge scheme, so `Program.cs` explicitly sets every default scheme to JwtBearer. Don't revert that to `AddAuthentication(JwtBearerDefaults.AuthenticationScheme)`, which leaves the cookie in charge (tokens ignored, 302 to `/Account/Login`). Login uses `CheckPasswordSignInAsync`, never `PasswordSignInAsync`, which would issue a cookie.

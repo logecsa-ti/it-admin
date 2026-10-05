@@ -1,5 +1,6 @@
 namespace TIAdmin.Application.HelpDesk;
 
+using TIAdmin.Application.Common;
 using TIAdmin.Application.Common.Interfaces;
 using TIAdmin.Application.Common.Models;
 using TIAdmin.Domain.Entities;
@@ -25,10 +26,13 @@ public interface IHelpDeskConfigService
     Task DeleteSlaPolicyAsync(int id, CancellationToken cancellationToken = default);
 }
 
-public sealed class HelpDeskConfigService(IUnitOfWork unitOfWork) : IHelpDeskConfigService
+public sealed class HelpDeskConfigService(IUnitOfWork unitOfWork, CatalogCache cache) : IHelpDeskConfigService
 {
+    private const string CategoriesCatalog = "ticket-categories";
+
     public Task<IReadOnlyList<TicketCategoryDto>> GetCategoriesAsync(bool? isActive, CancellationToken cancellationToken = default) =>
-        unitOfWork.TicketCategories.ListAsync(isActive, cancellationToken);
+        cache.GetOrCreateAsync(CategoriesCatalog, isActive?.ToString() ?? "all",
+            () => unitOfWork.TicketCategories.ListAsync(isActive, cancellationToken));
 
     public async Task<TicketCategoryDto> CreateCategoryAsync(TicketCategoryRequest request, CancellationToken cancellationToken = default)
     {
@@ -48,6 +52,7 @@ public sealed class HelpDeskConfigService(IUnitOfWork unitOfWork) : IHelpDeskCon
 
         await unitOfWork.TicketCategories.AddAsync(category, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        cache.Invalidate(CategoriesCatalog);
         return ToDto(category);
     }
 
@@ -70,6 +75,7 @@ public sealed class HelpDeskConfigService(IUnitOfWork unitOfWork) : IHelpDeskCon
         Apply(category, request);
         unitOfWork.TicketCategories.Update(category);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        cache.Invalidate(CategoriesCatalog);
         return ToDto(category);
     }
 

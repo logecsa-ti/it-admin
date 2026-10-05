@@ -4,7 +4,9 @@ using TIAdmin.Application.Common;
 using TIAdmin.Application.Common.Constants;
 using TIAdmin.Application.Common.Interfaces;
 using TIAdmin.Application.Common.Models;
+using TIAdmin.Application.Platform;
 using TIAdmin.Domain.Entities;
+using TIAdmin.Domain.Enums;
 using TIAdmin.Domain.Exceptions;
 
 /// <summary>
@@ -48,7 +50,8 @@ public sealed class ChangeService(
     ICurrentUserService currentUser,
     IUserDirectory userDirectory,
     ISystemSettings settings,
-    IClock clock)
+    IClock clock,
+    INotificationService notifications)
     : IChangeService
 {
     public const string NumberPrefixKey = "Changes.NumberPrefix";
@@ -91,21 +94,40 @@ public sealed class ChangeService(
         return await GetAsync(id, cancellationToken);
     }
 
-    public Task<ChangeRequestDto> SubmitAsync(int id, CancellationToken cancellationToken = default) =>
-        MutateAsync(id, change =>
+    public async Task<ChangeRequestDto> SubmitAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var dto = await MutateAsync(id, change =>
         {
             EnsureRequesterOrManager(change);
             change.Submit(clock.UtcNow);
         }, cancellationToken);
 
+        // Los cambios estandar quedan aprobados al enviarse: no requieren revision.
+        if (dto.Status == ChangeStatus.Requested)
+        {
+            await notifications.NotifyPermissionAsync(Permissions.ChangesReview,
+                ChangeNotice(dto, [], "ChangeReviewRequired", $"Cambio {dto.Number} pendiente de revision"), cancellationToken);
+        }
+
+        return dto;
+    }
+
     public Task<ChangeRequestDto> StartReviewAsync(int id, CancellationToken cancellationToken = default) =>
         MutateAsync(id, change => change.StartReview(), cancellationToken);
 
-    public Task<ChangeRequestDto> ApproveAsync(int id, string? comment, CancellationToken cancellationToken = default) =>
-        MutateAsync(id, change => change.Approve(Me, clock.UtcNow, Normalize(comment)), cancellationToken);
+    public async Task<ChangeRequestDto> ApproveAsync(int id, string? comment, CancellationToken cancellationToken = default)
+    {
+        var dto = await MutateAsync(id, change => change.Approve(Me, clock.UtcNow, Normalize(comment)), cancellationToken);
+        await notifications.NotifyAsync(ChangeNotice(dto, [dto.RequestedById], "ChangeApproved", $"Cambio {dto.Number} aprobado"), cancellationToken);
+        return dto;
+    }
 
-    public Task<ChangeRequestDto> RejectAsync(int id, string reason, CancellationToken cancellationToken = default) =>
-        MutateAsync(id, change => change.Reject(Me, clock.UtcNow, reason.Trim()), cancellationToken);
+    public async Task<ChangeRequestDto> RejectAsync(int id, string reason, CancellationToken cancellationToken = default)
+    {
+        var dto = await MutateAsync(id, change => change.Reject(Me, clock.UtcNow, reason.Trim()), cancellationToken);
+        await notifications.NotifyAsync(ChangeNotice(dto, [dto.RequestedById], "ChangeRejected", $"Cambio {dto.Number} rechazado"), cancellationToken);
+        return dto;
+    }
 
     public async Task<ChangeRequestDto> AssignAsync(int id, int userId, CancellationToken cancellationToken = default)
     {
@@ -114,7 +136,9 @@ public sealed class ChangeService(
             throw new DomainValidationException("USER_NOT_AVAILABLE", "El usuario indicado no existe o esta inactivo.");
         }
 
-        return await MutateAsync(id, change => change.Assign(userId), cancellationToken);
+        var dto = await MutateAsync(id, change => change.Assign(userId), cancellationToken);
+        await notifications.NotifyAsync(ChangeNotice(dto, [userId], "ChangeAssigned", $"Cambio {dto.Number} asignado"), cancellationToken);
+        return dto;
     }
 
     public Task<ChangeRequestDto> StartImplementationAsync(int id, CancellationToken cancellationToken = default) =>
@@ -207,6 +231,9 @@ public sealed class ChangeService(
         change.PlannedDate = request.PlannedDate is { } planned ? DateTime.SpecifyKind(planned, DateTimeKind.Utc) : null;
         change.RollbackPlan = Normalize(request.RollbackPlan);
     }
+
+    private NotificationRequest ChangeNotice(ChangeRequestDto change, IReadOnlyCollection<int> userIds, string type, string title) =>
+        new(userIds, type, title, change.Title, "ChangeRequest", change.Id, $"/changes/{change.Id}", ExcludeUserId: currentUser.UserId);
 
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

@@ -1,6 +1,6 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace TIAdmin.Application.Common.Models;
+
+using System.ComponentModel.DataAnnotations;
 
 public sealed class JwtOptions
 {
@@ -87,7 +87,7 @@ public sealed class EmailOptions
 {
     public const string SectionName = "Email";
 
-    public bool Enabled { get; set; } = false;
+    public bool Enabled { get; set; }
 
     public string From { get; set; } = "no-reply@tiadmin.local";
 
@@ -97,7 +97,7 @@ public sealed class EmailOptions
 
     public int SmtpPort { get; set; } = 25;
 
-    public bool UseSsl { get; set; } = false;
+    public bool UseSsl { get; set; }
 
     public string? UserName { get; set; }
 
@@ -126,7 +126,7 @@ public sealed class SeedOptions
     /// Habilita el seed de datos iniciales (roles, permisos, usuario admin).
     /// Debe ser false en produccion.
     /// </summary>
-    public bool Enabled { get; set; } = false;
+    public bool Enabled { get; set; }
 
     public string AdminUserName { get; set; } = "admin";
 

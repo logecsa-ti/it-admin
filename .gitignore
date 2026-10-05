@@ -65,6 +65,10 @@ Desktop.ini
 logs/
 log/
 
+# ---------- Archivos cargados (Storage:RootPath local, ADR-006) ----------
+src/TIAdmin.Api/storage/
+storage/
+
 # ---------- Docker / Volumes ----------
 docker-data/
 *.tar

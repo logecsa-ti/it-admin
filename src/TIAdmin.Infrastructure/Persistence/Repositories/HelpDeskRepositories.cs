@@ -237,6 +237,14 @@ public class TicketRepository : BaseRepository<Ticket>, ITicketRepository
             .Select(h => new TicketHistoryDto(h.Id, h.FromStatus, h.ToStatus, h.UserName, h.Comment, h.Timestamp))
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<SlaBreachRow>> GetOpenSlaBreachesAsync(DateTime now, CancellationToken cancellationToken = default) =>
+        await Set.AsNoTracking()
+            .Where(t => t.Status != TicketStatus.Resolved && t.Status != TicketStatus.Closed && t.Status != TicketStatus.Cancelled
+                && ((t.FirstResponseAt == null && t.DueAtResponse < now) || t.DueAtResolution < now))
+            .Select(t => new SlaBreachRow(t.Id, t.TicketNumber, t.Title, t.AssignedToId,
+                t.FirstResponseAt == null && t.DueAtResponse < now, t.DueAtResolution < now))
+            .ToListAsync(cancellationToken);
+
     /// <summary>Estado del SLA al momento de la consulta.</summary>
     private static TicketSlaDto Sla(DateTime? dueResponse, DateTime? dueResolution, DateTime? firstResponse, DateTime? resolved, DateTime now)
     {

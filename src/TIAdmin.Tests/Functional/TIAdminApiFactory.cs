@@ -27,6 +27,9 @@ public class TIAdminApiFactory : WebApplicationFactory<Program>
     public const string AllowedOrigin = "http://localhost:4200";
 
     private readonly string databaseName = $"TIAdminTests-{Guid.NewGuid()}";
+
+    /// <summary>Carpeta de archivos propia de esta factory (se elimina al liberarla).</summary>
+    public string StorageRoot { get; } = Path.Combine(Path.GetTempPath(), "tiadmin-tests", Guid.NewGuid().ToString("N"));
     private readonly Dictionary<string, string> tokens = [];
     private readonly SemaphoreSlim tokenLock = new(1, 1);
     private bool usersSeeded;
@@ -50,6 +53,8 @@ public class TIAdminApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Cors:AllowedOrigins:0", AllowedOrigin);
         builder.UseSetting("RateLimiting:Enabled", "true");
         builder.UseSetting("RateLimiting:LoginPermitLimit", LoginPermitLimit.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        builder.UseSetting("Jobs:Enabled", "false");
+        builder.UseSetting("Storage:RootPath", StorageRoot);
 
         builder.ConfigureTestServices(services =>
         {
@@ -137,6 +142,10 @@ public class TIAdminApiFactory : WebApplicationFactory<Program>
         if (disposing)
         {
             tokenLock.Dispose();
+            if (Directory.Exists(StorageRoot))
+            {
+                Directory.Delete(StorageRoot, recursive: true);
+            }
         }
 
         base.Dispose(disposing);

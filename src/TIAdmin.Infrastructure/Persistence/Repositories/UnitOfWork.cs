@@ -31,6 +31,9 @@ public sealed class UnitOfWork : IUnitOfWork
     private IPurchaseRequestRepository? purchaseRequests;
     private IAuditLogRepository? auditLogs;
     private ISystemConfigurationRepository? configurations;
+    private IDocumentRepository? documents;
+    private INotificationRepository? notifications;
+    private IExportJobRepository? exportJobs;
 
     public UnitOfWork(TIAdminDbContext context)
     {
@@ -74,6 +77,12 @@ public sealed class UnitOfWork : IUnitOfWork
     public IAuditLogRepository AuditLogs => auditLogs ??= new AuditLogRepository(context);
 
     public ISystemConfigurationRepository Configurations => configurations ??= new SystemConfigurationRepository(context);
+
+    public IDocumentRepository Documents => documents ??= new DocumentRepository(context);
+
+    public INotificationRepository Notifications => notifications ??= new NotificationRepository(context);
+
+    public IExportJobRepository ExportJobs => exportJobs ??= new ExportJobRepository(context);
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

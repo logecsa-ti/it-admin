@@ -261,6 +261,7 @@ public sealed class DatabaseSeeder(
             ("Maintenance.NumberPrefix", "MNT", "Maintenance", ConfigurationDataType.String, true, "Prefijo del numero de mantenimiento"),
             ("Changes.NumberPrefix", "CHG", "Changes", ConfigurationDataType.String, true, "Prefijo del numero de cambio"),
             ("Purchases.NumberPrefix", "PUR", "Purchases", ConfigurationDataType.String, true, "Prefijo del numero de solicitud de compra"),
+            ("Exports.AsyncThreshold", "5000", "Exports", ConfigurationDataType.Int, false, "Filas a partir de las cuales una exportacion se procesa en segundo plano"),
             ("Alerts.Maintenance.Days", "7", "Alerts", ConfigurationDataType.Int, true, "Dias de anticipacion para alertas de mantenimiento")
         };
 

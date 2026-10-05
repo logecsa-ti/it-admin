@@ -3,6 +3,8 @@ namespace TIAdmin.Api.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TIAdmin.Application.Assets;
+using TIAdmin.Application.Common.Interfaces;
+using TIAdmin.Application.Platform;
 using TIAdmin.Application.Common.Models;
 using TIAdmin.Application.Validators;
 using TIAdmin.Domain.Enums;
@@ -12,7 +14,7 @@ using Perms = TIAdmin.Application.Common.Constants.Permissions;
 [Route("api/v1/assets")]
 [Authorize]
 [Produces("application/json")]
-public sealed class AssetsController(IAssetService assets) : ControllerBase
+public sealed class AssetsController(IAssetService assets, IAssetImportService importer, ITabularFileWriter writer) : ControllerBase
 {
     [HttpGet]
     [Authorize(Policy = Perms.AssetsView)]
@@ -136,6 +138,43 @@ public sealed class AssetsController(IAssetService assets) : ControllerBase
         CancellationToken cancellationToken) =>
         Ok(ApiResponse<PagedResult<AssetAssignmentDto>>.Ok(
             await assets.GetAssignmentsAsync(query, new AssignmentFilter(null, id, null), cancellationToken)));
+
+    /// <summary>
+    /// Importa activos desde csv/xlsx (multipart <c>file</c>). Todo o nada: con errores no importa ninguna fila.
+    /// <c>dryRun=true</c> solo valida.
+    /// </summary>
+    [HttpPost("import")]
+    [Authorize(Policy = Perms.AssetsCreate)]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(30 * 1024 * 1024)]
+    public async Task<ActionResult<ApiResponse<ImportResult>>> Import([FromForm] IFormFile? file, [FromQuery] bool dryRun, CancellationToken cancellationToken)
+    {
+        if (file is null)
+        {
+            return BadRequest(ApiResponse.Fail("Adjunte un archivo.", [new ApiError("FILE_REQUIRED", "Adjunte un archivo.")]));
+        }
+
+        var format = Path.GetExtension(file.FileName).TrimStart('.').ToLowerInvariant();
+        await using var content = file.OpenReadStream();
+        var result = await importer.ImportAsync(content, format, dryRun, cancellationToken);
+
+        return result.Errors.Count > 0
+            ? BadRequest(ApiResponse<ImportResult>.Fail($"El archivo tiene {result.Errors.Count} errores; no se importo ninguna fila.",
+                result.Errors.Take(100).Select(e => new ApiError("IMPORT_ROW_ERROR", $"Fila {e.Row}, {e.Field}: {e.Message}"))))
+            : Ok(ApiResponse<ImportResult>.Ok(result, dryRun ? "Validacion correcta." : $"{result.Imported} activos importados."));
+    }
+
+    [HttpGet("import/template")]
+    [Authorize(Policy = Perms.AssetsCreate)]
+    public async Task<IActionResult> ImportTemplate([FromQuery] string? format, CancellationToken cancellationToken)
+    {
+        var normalized = string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase) ? "csv" : "xlsx";
+        var output = new MemoryStream();
+        await writer.WriteAsync(importer.Template(), normalized, output, cancellationToken);
+        output.Position = 0;
+        return File(output, normalized == "csv" ? "text/csv; charset=utf-8" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"plantilla-activos.{normalized}");
+    }
 
     [HttpGet("{id:int}/movements")]
     [Authorize(Policy = Perms.AssetsView)]
