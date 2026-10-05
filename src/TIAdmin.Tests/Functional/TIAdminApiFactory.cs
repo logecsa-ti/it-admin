@@ -180,6 +180,16 @@ public sealed class LowLoginLimitApiFactory : TIAdminApiFactory
     protected override int LoginPermitLimit => Limit;
 }
 
+/// <summary>Mismas convenciones JSON que la API (enums como texto), para leer respuestas tipadas.</summary>
+public static class TestJson
+{
+    public static readonly System.Text.Json.JsonSerializerOptions Options =
+        new(System.Text.Json.JsonSerializerDefaults.Web)
+        {
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+        };
+}
+
 public sealed record ApiEnvelope<T>(bool Success, T? Data, string? Message, IReadOnlyList<ApiErrorItem>? Errors, string? TraceId);
 
 public sealed record ApiErrorItem(string Code, string Message);

@@ -55,6 +55,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILocationRepository, LocationRepository>();
         services.AddScoped<IAssetRepository, AssetRepository>();
         services.AddScoped<IAssetAssignmentRepository, AssetAssignmentRepository>();
+        services.AddScoped<IAssetMovementRepository, AssetMovementRepository>();
+        services.AddScoped<IAssetTypeRepository, AssetTypeRepository>();
+        services.AddScoped<IUserDirectory, UserDirectory>();
 
         services.AddScoped<DatabaseSeeder>();
 

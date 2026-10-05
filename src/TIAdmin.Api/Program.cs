@@ -11,6 +11,7 @@ using Serilog.Events;
 using TIAdmin.Api.Filters;
 using TIAdmin.Api.Middleware;
 using TIAdmin.Api.Services;
+using TIAdmin.Application;
 using TIAdmin.Application.Common.Interfaces;
 using TIAdmin.Application.Common.Models;
 using TIAdmin.Infrastructure.Extensions;
@@ -71,6 +72,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddApplicationOptions(builder.Configuration);
+builder.Services.AddApplication();
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddIdentity();
 

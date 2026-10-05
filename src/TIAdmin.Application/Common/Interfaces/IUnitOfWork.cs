@@ -14,5 +14,13 @@ public interface IUnitOfWork
 
     IAssetAssignmentRepository AssetAssignments { get; }
 
+    IAssetMovementRepository AssetMovements { get; }
+
+    IAssetTypeRepository AssetTypes { get; }
+
+    /// <summary>
+    /// Persiste los cambios. Una violacion de indice unico (p. ej. dos asignaciones
+    /// simultaneas del mismo activo) se traduce a <see cref="Domain.Exceptions.ConflictException"/>.
+    /// </summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

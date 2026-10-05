@@ -1,6 +1,5 @@
 namespace TIAdmin.Api.Controllers;
 
-using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TIAdmin.Application.Common.Interfaces;
@@ -39,7 +38,7 @@ public sealed class UsersController(IUserManagementService users, ICurrentUserSe
         [FromBody] CreateUserRequest request,
         CancellationToken cancellationToken)
     {
-        if (await ValidateAsync(new CreateUserRequestValidator(), request, cancellationToken) is { } invalid)
+        if (await this.ValidateAsync(new CreateUserRequestValidator(), request, cancellationToken) is { } invalid)
         {
             return invalid;
         }
@@ -55,7 +54,7 @@ public sealed class UsersController(IUserManagementService users, ICurrentUserSe
         [FromBody] UpdateUserRequest request,
         CancellationToken cancellationToken)
     {
-        if (await ValidateAsync(new UpdateUserRequestValidator(), request, cancellationToken) is { } invalid)
+        if (await this.ValidateAsync(new UpdateUserRequestValidator(), request, cancellationToken) is { } invalid)
         {
             return invalid;
         }
@@ -87,7 +86,7 @@ public sealed class UsersController(IUserManagementService users, ICurrentUserSe
         [FromBody] AssignRolesRequest request,
         CancellationToken cancellationToken)
     {
-        if (await ValidateAsync(new AssignRolesRequestValidator(), request, cancellationToken) is { } invalid)
+        if (await this.ValidateAsync(new AssignRolesRequestValidator(), request, cancellationToken) is { } invalid)
         {
             return invalid;
         }
@@ -103,20 +102,11 @@ public sealed class UsersController(IUserManagementService users, ICurrentUserSe
         [FromBody] AssignPermissionsRequest request,
         CancellationToken cancellationToken)
     {
-        if (await ValidateAsync(new AssignPermissionsRequestValidator(), request, cancellationToken) is { } invalid)
+        if (await this.ValidateAsync(new AssignPermissionsRequestValidator(), request, cancellationToken) is { } invalid)
         {
             return invalid;
         }
 
         return Ok(ApiResponse<UserDetailDto>.Ok(await users.SetDirectPermissionsAsync(id, request.Permissions, cancellationToken)));
-    }
-
-    private async Task<ActionResult?> ValidateAsync<T>(IValidator<T> validator, T request, CancellationToken cancellationToken)
-    {
-        var validation = await validator.ValidateAsync(request, cancellationToken);
-        return validation.IsValid
-            ? null
-            : BadRequest(ApiResponse.Fail("Los datos proporcionados no son validos.",
-                validation.Errors.Select(e => new ApiError("VALIDATION_ERROR", e.ErrorMessage)).ToArray()));
     }
 }

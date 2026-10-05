@@ -5,7 +5,7 @@
 **Fecha de inicio:** 2026-10-02
 **Última actualización:** 2026-10-05
 **Estado general:** En progreso
-**Fase actual:** Fase 4 - Activos y Asignaciones (Fase 3 completada; entidades/migración de Fase 4 ya creadas)
+**Fase actual:** Fase 5 - Software/Licencias/Proveedores/Contratos (Fase 4 completada)
 
 ---
 
@@ -45,10 +45,10 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 
 | Métrica | Valor |
 |---|---|
-| Fase actual | **Fase 4 - Activos y Asignaciones** |
-| Fases completadas | 4 / 12 (Fase 0, 1, 2, 3) |
-| Tareas completadas (Fase 3) | 5 / 5 |
-| Tests | 79 / 79 (35 unit + 44 functional) |
+| Fase actual | **Fase 5 - Software/Licencias/Proveedores/Contratos** |
+| Fases completadas | 5 / 12 (Fase 0, 1, 2, 3, 4) |
+| Tareas completadas (Fase 4) | 5 / 6 (relación con Documents pasa a Fase 10) |
+| Tests | 116 / 116 (60 unit + 56 functional) |
 | Estado | En progreso |
 
 ### Progreso global
@@ -59,7 +59,7 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 1 - Infraestructura Base | ✅ Completada |
 | 2 - Auth/Authz/Seguridad | ✅ Completada |
 | 3 - Núcleo Organizacional | ✅ Completada |
-| 4 - Activos y Asignaciones | 🟡 Entidades y migración creadas (sin endpoints) |
+| 4 - Activos y Asignaciones | ✅ Completada |
 | 5 - Software/Licencias/Proveedores/Contratos | ⬜ Pendiente |
 | 6 - Help Desk/Solicitudes/SLA | ⬜ Pendiente |
 | 7 - Mantenimientos/Cambios/Compras | ⬜ Pendiente |
@@ -119,6 +119,14 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 2026-10-05 | Fase 3 | **Corrección**: índice único `IX_Users_EmployeeCode` sin filtro (SQL Server solo admite un NULL → el 2.º usuario sin código daba 500). Ahora `[EmployeeCode] IS NOT NULL`. FKs `Users.DepartmentId/LocationId` (Restrict). Migración `UsersOrganizationReferences` aplicada | `IdentityConfigurations.cs`, `Migrations/**` | Verificado en SQL Server |
 | 2026-10-05 | Fase 3 | Seeder: los roles de sistema se marcan `IsSystemRole` (antes nunca se asignaba); la matriz por defecto solo se aplica al crear el rol (SUPER_ADMIN siempre recibe todo el catálogo) | `DatabaseSeeder.cs` | ADR-017 |
 | 2026-10-05 | Fase 3 | +23 tests funcionales (`UsersEndpointsTests`, `RolesEndpointsTests`); verificado en SQL Server: usuarios sin código de empleado, auditoría de UserRole, sin auditoría por login, `IsSystemRole` en roles existentes | `Tests/Functional/**` | 79/79 |
+| 2026-10-05 | Repo | `.gitattributes`: `* text=auto` (LF en el repo, nativo en checkout), `.sh`/Dockerfile LF, `.cmd`/`.ps1`/`.sln(x)` CRLF, binarios. Renormalización sin cambios (el índice ya era LF) | `.gitattributes` | — |
+| 2026-10-05 | Fase 4 | Reglas del activo en el dominio: `Asset.AssignTo` / `Return` / `ChangeStatus` / `EnsureCanBeDeleted`, `Status` y `CurrentUserId` con setter privado, `AssetStatusRules` (transiciones permitidas), `AssetAssignment.Close` (historial: un registro cerrado no vuelve a cambiar) | `Domain/Entities/AssetEntities.cs` | ADR-018 |
+| 2026-10-05 | Fase 4 | Entidad `AssetMovement` (bitácora inmutable: asignación, devolución, estado, ubicación, departamento; usuario, CorrelationId) + migración `AddAssetMovements` aplicada | `AssetConfigurations.cs`, `Migrations/**` | — |
+| 2026-10-05 | Fase 4 | `IAssetService` / `AssetService` en Application (primer servicio de casos de uso; `AddApplication()`), puerto `IUserDirectory`. Endpoints: `GET/POST /assets`, `GET /assets/mine`, `GET/PUT/DELETE /assets/{id}`, `PATCH /assets/{id}/status`, `POST /assets/{id}/assign` y `/return`, `GET /assets/{id}/assignments` y `/movements`, `GET /assignments`, `GET/POST/PUT /asset-types` | `Application/Assets/**`, `Api/Controllers/Asset*.cs` | — |
+| 2026-10-05 | Fase 4 | `UnitOfWork.SaveChangesAsync` traduce violaciones de índice único (SQL 2601/2627) a `ConflictException` 409 `DUPLICATE_RECORD`. Verificado: 6 asignaciones concurrentes del mismo activo → 1×200, 5×409, una sola asignación activa | `UnitOfWork.cs` | — |
+| 2026-10-05 | Fase 4 | `ValidationExtensions.ValidateAsync` compartido por controllers (antes duplicado) | `Api/Controllers/ValidationExtensions.cs` | — |
+| 2026-10-05 | General | **Corrección**: las fechas se devolvían sin `Z` (datetime2 no guarda el Kind → `Unspecified`); el frontend las habría interpretado como hora local (−6 h en Managua). `UtcDateTimeConverter` como convención para todo `DateTime`/`DateTime?` (sin cambio de esquema) | `TIAdminDbContext.cs`, `UtcDateTimeConverter.cs` | ADR-019. Verificado en SQL Server |
+| 2026-10-05 | Fase 4 | +37 tests: `AssetTests` (dominio, sin BD) y `AssetsEndpointsTests` (ciclo de vida completo con historial, estados, movimientos, permisos, tipos). Verificado en SQL Server: proyecciones con subconsultas, historial de activos eliminados, serial reservado | `Tests/**` | 116/116 |
 | 2026-10-05 | Fase 3 | **Verificado contra SQL Server**: login, 401 JSON sin token, CRUD departamentos (padre inexistente 400, ciclo 400, borrar con hijos 409, paginación/orden, soft delete + AuditLog Delete, código reservado 400), `GET /locations` paginado | — | Smoke test manual con curl |
 
 ---
@@ -174,10 +182,19 @@ Pendientes conocidos (no bloquean):
 - Tests de integración contra SQL Server real (Testcontainers)
 
 ### Fase 4 - Activos TI y Asignaciones
-**Estado:** 🟡 Adelantada parcialmente
+**Estado:** ✅ Completada | **Tareas:** 5/6
 
-- [x] Entidades `Asset` / `AssetAssignment`, configuración Fluent API, repositorios, migración `AddAssetsAndAssignments` (aplicada)
-- [ ] Endpoints `/assets`, `/asset-types`, `/assignments`; flujo asignar/desasignar con historial inmutable; `AssetMovement`
+- [x] 4.1 Catálogo de tipos de activo (`/asset-types`; se desactivan, no se eliminan; seed de 12 tipos)
+- [x] 4.2 Activos: CRUD, búsqueda/filtros (estado, tipo, depto, ubicación, usuario, garantía), códigos/serial únicos, baja lógica, jerarquía padre-hijo sin ciclos
+- [x] 4.3 Asignaciones con historial inmutable; `Asset.Status`/`CurrentUserId` coherentes con la asignación activa; índice único filtrado como respaldo ante concurrencia
+- [x] 4.4 `AssetMovement`: asignación, devolución, cambio de estado, ubicación y departamento
+- [x] 4.5 Endpoints y permisos ASSETS.* / ASSIGNMENTS.VIEW / ASSET_TYPES.MANAGE
+- [ ] 4.6 Relación con Documents → Fase 10
+
+Pendientes / decisiones abiertas:
+- Q-10: el rol USER tiene `ASSETS.VIEW` (ve todo el inventario) aunque su descripción dice "consulta de sus propios activos". Se agregó `GET /assets/mine`; decidir si quitar `ASSETS.VIEW` a USER
+- Desactivar un usuario con activos asignados no está bloqueado ni avisa
+- `VendorId` en `Assets` sin FK hasta que exista `Vendors` (Fase 5)
 
 ### Fase 5 - Software/Licenciamiento/Proveedores/Contratos
 **Estado:** Pending
@@ -225,6 +242,8 @@ Pendientes conocidos (no bloquean):
 | ADR-014 | 2026-10-05 | FKs hacia `Users` declaradas solo en Fluent API (`HasOne<ApplicationUser>()`), el dominio guarda ids `int` | Domain no depende de Identity; integridad referencial real (CONVENTIONS §2.2) | Propuesto |
 | ADR-015 | 2026-10-05 | Auditar las entidades de Identity (usuarios, roles, asignaciones) en `AuditTrailInterceptor`, no endpoint por endpoint | Un único punto; cubre también cambios hechos fuera de los controllers. Se filtran Updates sin cambios reales | Propuesto |
 | ADR-016 | 2026-10-05 | Los usuarios no se eliminan: se desactivan (`USERS.DISABLE`) y se revocan sus refresh tokens. Asignar roles/permisos exige `ROLES.MANAGE` | Conserva historial (asignaciones, tickets, auditoría); asignar roles es escalar privilegios | Propuesto |
+| ADR-018 | 2026-10-05 | Reglas de estado del activo en la entidad de dominio (`Asset.AssignTo/Return/ChangeStatus`, setters privados); orquestación en un servicio de Application (`AssetService`) | Clean Architecture (CONVENTIONS §1.3): reglas testeables sin BD; los controllers quedan delgados. Patrón para flujos con varias entidades | Propuesto |
+| ADR-019 | 2026-10-05 | Convención EF `UtcDateTimeConverter` para todo `DateTime`: se lee con `Kind=Utc` | ADR-005; JSON con `Z` para que el frontend convierta a la zona configurada | Propuesto |
 | ADR-017 | 2026-10-05 | El seed aplica la matriz de permisos por defecto solo al crear un rol de sistema; SUPER_ADMIN siempre recibe el catálogo completo | Los cambios hechos vía `/roles` no deben revertirse al reiniciar; permisos nuevos del catálogo llegan a SUPER_ADMIN y se asignan al resto vía API | Propuesto |
 
 ---
@@ -282,13 +301,15 @@ git log --oneline -5
 | Q-06 | ¿Enums persistidos como `int` o `string`? | Equipo técnico |
 | Q-07 | ¿`Tickets` y `ServiceRequests` unificados? | Negocio/TI |
 | Q-09 | ¿Cifrado de `LicenseKey` con Data Protection o SQL Always Encrypted? | Seguridad |
+| Q-10 | ¿El rol USER debe ver todo el inventario (`ASSETS.VIEW`) o solo sus activos (`GET /assets/mine`)? | Negocio/TI |
 
 ---
 
 ## 8. Próximos Pasos
 
-1. **Fase 4**: endpoints `/assets`, `/asset-types`, `/assignments`; flujo asignar/desasignar con historial inmutable (`AssetAssignment`), coherencia `Asset.Status`, `AssetMovement`
-2. Tests de integración con Testcontainers (SQL Server real)
+1. Decidir Q-10 (permisos del rol USER sobre activos)
+2. **Fase 5**: Vendors, Software, SoftwareLicenses (sin sobreasignación, `LicenseKey` protegida), Contracts con alertas configurables; FK `Assets.VendorId`
+3. Tests de integración con Testcontainers (SQL Server real)
 3. Actualizar esta memoria tras cada cambio significativo
 
 ### Comandos de arranque (dev)

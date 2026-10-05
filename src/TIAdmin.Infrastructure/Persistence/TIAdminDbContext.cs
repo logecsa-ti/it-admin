@@ -35,6 +35,8 @@ public class TIAdminDbContext : IdentityDbContext<ApplicationUser, ApplicationRo
 
     public DbSet<Domain.Entities.AssetAssignment> AssetAssignments => Set<Domain.Entities.AssetAssignment>();
 
+    public DbSet<Domain.Entities.AssetMovement> AssetMovements => Set<Domain.Entities.AssetMovement>();
+
     public DbSet<ApplicationPermission> Permissions => Set<ApplicationPermission>();
 
     public DbSet<ApplicationRolePermission> RolePermissions => Set<ApplicationRolePermission>();

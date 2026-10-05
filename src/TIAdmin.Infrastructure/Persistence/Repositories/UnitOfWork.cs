@@ -1,15 +1,23 @@
 namespace TIAdmin.Infrastructure.Persistence.Repositories;
 
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using TIAdmin.Application.Common.Interfaces;
+using TIAdmin.Domain.Exceptions;
 using TIAdmin.Infrastructure.Persistence;
 
 public sealed class UnitOfWork : IUnitOfWork
 {
+    /// <summary>Violacion de indice unico (2601) o de restriccion UNIQUE/PK (2627).</summary>
+    private static readonly int[] UniqueViolationNumbers = [2601, 2627];
+
     private readonly TIAdminDbContext context;
     private IDepartmentRepository? departments;
     private ILocationRepository? locations;
     private IAssetRepository? assets;
     private IAssetAssignmentRepository? assetAssignments;
+    private IAssetMovementRepository? assetMovements;
+    private IAssetTypeRepository? assetTypes;
 
     public UnitOfWork(TIAdminDbContext context)
     {
@@ -24,6 +32,23 @@ public sealed class UnitOfWork : IUnitOfWork
 
     public IAssetAssignmentRepository AssetAssignments => assetAssignments ??= new AssetAssignmentRepository(context);
 
-    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
-        await context.SaveChangesAsync(cancellationToken);
+    public IAssetMovementRepository AssetMovements => assetMovements ??= new AssetMovementRepository(context);
+
+    public IAssetTypeRepository AssetTypes => assetTypes ??= new AssetTypeRepository(context);
+
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is SqlException sql
+            && UniqueViolationNumbers.Contains(sql.Number))
+        {
+            // Las validaciones previas cubren el caso normal; esto atrapa carreras entre peticiones
+            // (p. ej. dos asignaciones simultaneas del mismo activo).
+            throw new ConflictException("DUPLICATE_RECORD",
+                "La operacion entra en conflicto con un registro existente. Recargue e intente nuevamente.");
+        }
+    }
 }

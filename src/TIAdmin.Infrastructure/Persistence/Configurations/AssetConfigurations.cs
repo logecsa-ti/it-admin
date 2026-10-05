@@ -61,6 +61,46 @@ public class AssetConfiguration : IEntityTypeConfiguration<Asset>
     }
 }
 
+public class AssetMovementConfiguration : IEntityTypeConfiguration<AssetMovement>
+{
+    public void Configure(EntityTypeBuilder<AssetMovement> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("AssetMovements");
+        builder.HasKey(m => m.Id);
+
+        builder.Property(m => m.MovementType).HasConversion<int>();
+        builder.Property(m => m.FromValue).HasMaxLength(300);
+        builder.Property(m => m.ToValue).HasMaxLength(300);
+        builder.Property(m => m.UserName).HasMaxLength(256);
+        builder.Property(m => m.Notes).HasMaxLength(1000);
+        builder.Property(m => m.CorrelationId).HasMaxLength(64);
+
+        builder.HasIndex(m => new { m.AssetId, m.Timestamp }).HasDatabaseName("IX_AssetMovements_AssetId_Timestamp");
+
+        builder.HasOne(m => m.Asset)
+            .WithMany()
+            .HasForeignKey(m => m.AssetId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Location>()
+            .WithMany()
+            .HasForeignKey(m => m.FromLocationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Location>()
+            .WithMany()
+            .HasForeignKey(m => m.ToLocationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(m => m.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 public class AssetAssignmentConfiguration : IEntityTypeConfiguration<AssetAssignment>
 {
     public void Configure(EntityTypeBuilder<AssetAssignment> builder)
