@@ -84,6 +84,7 @@ Users are deactivated, never deleted. Assigning roles or direct permissions requ
   - **Documents:** stored via `IFileStorage` (local root `Storage:RootPath`, paths confined to it, generated names, SHA-256). Access follows the owning entity's permissions (`DocumentService.Rules`); add an entry there when a new entity accepts attachments.
   - **Notifications:** go through `INotificationService` *after* the business save. They never throw, and the actor is excluded via `ExcludeUserId`. Periodic alerts pass a `DedupKey` (unique index per user). Email goes through `IEmailQueue` (logged instead of sent when `Email:Enabled=false`).
   - **Background services:** `EmailDispatchWorker`, `ExportWorker` and `AlertScanWorker` (disable the last with `Jobs:Enabled=false`; functional tests do and run `IAlertNotificationJob` directly).
+  - **Handover actas:** assigning/returning an asset archives a PDF acta (QuestPDF, `HandoverDocumentRenderer`) as a `Document` of the asset after the save; `AssetHandoverService.ArchiveAsync` never throws (ADR-040). Clauses come from `Assets.Handover.*` settings.
   - **Exports:** `ExportService.Definitions` (report → module permission + builder). Above `Exports.AsyncThreshold` rows an export becomes an `ExportJob`.
   - **Catalog cache:** `CatalogCache` with `Invalidate(catalog)` on writes.
 - **FKs to users**: Domain entities hold plain `int` user ids. The FK to `Users` is declared only in the Fluent config, via `builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(...)` with `Restrict`.

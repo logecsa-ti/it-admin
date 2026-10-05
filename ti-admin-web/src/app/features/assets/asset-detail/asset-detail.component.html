@@ -80,6 +80,16 @@
                     {{ row.returnDate | appDate }}
                   }
                 </ng-template>
+                <ng-template appCell="acta" let-row>
+                  <button mat-icon-button type="button" matTooltip="Acta de entrega" aria-label="Descargar acta de entrega" (click)="downloadHandover(a.id, row.id, 'delivery')">
+                    <mat-icon>description</mat-icon>
+                  </button>
+                  @if (row.returnDate) {
+                    <button mat-icon-button type="button" matTooltip="Acta de devolucion" aria-label="Descargar acta de devolucion" (click)="downloadHandover(a.id, row.id, 'return')">
+                      <mat-icon>assignment_return</mat-icon>
+                    </button>
+                  }
+                </ng-template>
               </app-data-table>
             </mat-tab>
             <mat-tab label="Movimientos">

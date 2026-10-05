@@ -43,6 +43,12 @@ export interface FieldDef {
   defaultValue?: unknown;
 }
 
+/** Resultado al guardar. Envuelto para no confundirlo con un cierre (Cancelar, Escape) que no trae valor. */
+export interface FormDialogResult<T> {
+  saved: true;
+  result: T;
+}
+
 export interface FormDialogData<T = unknown> {
   title: string;
   fields: FieldDef[];
@@ -101,6 +107,7 @@ export interface FormDialogData<T = unknown> {
                   [class.span-all]="field.wide"
                   [formControlName]="field.key"
                   [label]="field.label"
+                  [required]="!!field.required"
                   [search]="field.search!"
                   [initialLabel]="field.pickerLabel?.(data.value ?? {})"
                   [hint]="field.hint ?? null"
@@ -144,7 +151,7 @@ export interface FormDialogData<T = unknown> {
         </div>
       </mat-dialog-content>
       <mat-dialog-actions align="end">
-        <button mat-button type="button" mat-dialog-close>Cancelar</button>
+        <button mat-button type="button" (click)="cancel()">Cancelar</button>
         <button mat-flat-button type="submit" [disabled]="saving()">{{ data.submitText ?? 'Guardar' }}</button>
       </mat-dialog-actions>
     </form>
@@ -206,6 +213,11 @@ export class FormDialogComponent {
     return 'Valor invalido.';
   }
 
+  /** Cancelar cierra sin resultado: quien abrio el dialogo no debe tratarlo como guardado. */
+  cancel(): void {
+    this.dialogRef.close();
+  }
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -218,7 +230,7 @@ export class FormDialogComponent {
       raw[field.key] = fromLocalInput(raw[field.key] as string | null);
     }
     this.data.save(toRequest(raw)).subscribe({
-      next: (result) => this.dialogRef.close(result ?? true),
+      next: (result) => this.dialogRef.close({ saved: true, result } satisfies FormDialogResult<unknown>),
       error: (error: unknown) => {
         const info = toApiError(error);
         const unmatched = applyServerErrors(this.form, info);

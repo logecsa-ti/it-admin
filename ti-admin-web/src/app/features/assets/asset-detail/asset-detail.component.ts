@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, untracked, viewChild } from '@angular/core';
 import { of } from 'rxjs';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,7 +6,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
+import { saveFile } from '@core/api/api.service';
 import { AuthService } from '@core/auth/auth.service';
 import { PERMISSIONS as P } from '@core/auth/permissions.generated';
 import { AssetAssignmentDto, AssetDetailDto, AssetMovementDto, AssetStatus } from '@core/models';
@@ -24,7 +26,7 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DialogsService } from '@shared/services/dialogs.service';
 import { LookupService } from '@shared/services/lookup.service';
 import { emptyPage, pagedList } from '@shared/utils/paged-list';
-import { AssetsService } from '../assets.service';
+import { AssetsService, HandoverKind } from '../assets.service';
 
 /** Estados a los que se puede pasar manualmente (Assigned solo via asignacion; reglas en AssetStatusRules). */
 const MANUAL_STATUSES: AssetStatus[] = ['Available', 'Maintenance', 'Repair', 'Retired', 'Lost', 'Disposed'];
@@ -39,6 +41,7 @@ const MANUAL_STATUSES: AssetStatus[] = ['Available', 'Maintenance', 'Repair', 'R
     MatMenuModule,
     MatProgressBarModule,
     MatTabsModule,
+    MatTooltipModule,
     PageHeaderComponent,
     StatusBadgeComponent,
     DataTableComponent,
@@ -89,7 +92,10 @@ export class AssetDetailComponent {
     { key: 'to', header: 'Devuelto' },
     { key: 'by', header: 'Asigno', value: (a) => a.assignedByName, hideOnMobile: true },
     { key: 'condition', header: 'Condicion', value: (a) => [a.conditionAtAssignment, a.conditionAtReturn].filter(Boolean).join(' → ') || '—', hideOnMobile: true },
+    { key: 'acta', header: 'Actas', width: '104px', align: 'end' },
   ];
+
+  private readonly documentsPanel = viewChild(DocumentsPanelComponent);
 
   protected readonly movementColumns: TableColumn<AssetMovementDto>[] = [
     { key: 'date', header: 'Fecha', width: '170px' },
@@ -122,10 +128,16 @@ export class AssetDetailComponent {
         ],
         save: (value) => this.assets.assign(asset.id, value as { userId: number }),
       })
-      .subscribe(() => this.changed('Activo asignado.'));
+      .subscribe((updated) => {
+        this.changed('Activo asignado. Se descargo el acta de entrega para firma.');
+        if (updated.currentAssignment) {
+          this.downloadHandover(asset.id, updated.currentAssignment.id, 'delivery');
+        }
+      });
   }
 
   returnAsset(asset: AssetDetailDto): void {
+    const assignmentId = asset.currentAssignment?.id;
     this.dialogs
       .form({
         title: `Registrar devolucion de ${asset.assetCode}`,
@@ -143,7 +155,12 @@ export class AssetDetailComponent {
         ],
         save: (value) => this.assets.returnAsset(asset.id, value),
       })
-      .subscribe(() => this.changed('Devolucion registrada.'));
+      .subscribe(() => {
+        this.changed('Devolucion registrada. Se descargo el acta de devolucion para firma.');
+        if (assignmentId) {
+          this.downloadHandover(asset.id, assignmentId, 'return');
+        }
+      });
   }
 
   changeStatus(asset: AssetDetailDto): void {
@@ -183,10 +200,16 @@ export class AssetDetailComponent {
       });
   }
 
+  /** Acta en PDF (ADR-040): el servidor la archiva al asignar/devolver; aqui se descarga para imprimir y firmar. */
+  downloadHandover(assetId: number, assignmentId: number, kind: HandoverKind): void {
+    this.assets.handover(assetId, assignmentId, kind).subscribe((file) => saveFile(file));
+  }
+
   private changed(message: string): void {
     this.toast.success(message);
     this.asset.reload();
     this.assignments.reload();
     this.movements.reload();
+    this.documentsPanel()?.reload();
   }
 }

@@ -38,7 +38,7 @@ export type ConfirmResult = false | true | string;
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button type="button" mat-dialog-close>{{ data.cancelText ?? 'Cancelar' }}</button>
+      <button mat-button type="button" (click)="cancel()">{{ data.cancelText ?? 'Cancelar' }}</button>
       <button mat-flat-button type="button" [class.destructive]="data.destructive" (click)="confirm()">
         {{ data.confirmText ?? 'Confirmar' }}
       </button>
@@ -67,6 +67,10 @@ export class ConfirmDialogComponent {
     nonNullable: true,
     validators: this.data.reason?.required ? [Validators.required] : [],
   });
+
+  cancel(): void {
+    this.dialogRef.close(false);
+  }
 
   confirm(): void {
     if (!this.data.reason) {

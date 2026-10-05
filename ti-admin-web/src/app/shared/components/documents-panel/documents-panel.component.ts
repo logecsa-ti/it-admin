@@ -90,6 +90,11 @@ export class DocumentsPanelComponent {
   });
   protected readonly items = computed(() => valueOf(this.documents) ?? []);
 
+  /** Vuelve a consultar la lista (p. ej. cuando el servidor adjunta un acta al asignar). */
+  reload(): void {
+    this.documents.reload();
+  }
+
   upload(input: HTMLInputElement): void {
     const file = input.files?.[0];
     input.value = '';

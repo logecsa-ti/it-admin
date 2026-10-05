@@ -15,7 +15,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { Observable, catchError, debounceTime, distinctUntilChanged, filter, of, switchMap, tap } from 'rxjs';
+import { Observable, Subject, catchError, debounceTime, distinctUntilChanged, filter, merge, of, switchMap, tap } from 'rxjs';
 import { Option } from '@shared/services/lookup.service';
 
 /**
@@ -35,6 +35,8 @@ import { Option } from '@shared/services/lookup.service';
         [formControl]="text"
         [matAutocomplete]="auto"
         [placeholder]="placeholder()"
+        [required]="required()"
+        (focus)="onFocus()"
         (blur)="onBlur()"
       />
       @if (selectedId() !== null && !disabled()) {
@@ -78,6 +80,8 @@ export class EntityPickerComponent implements ControlValueAccessor, OnInit {
   readonly initialLabel = input<string | null | undefined>();
   readonly placeholder = input('Escriba para buscar');
   readonly hint = input<string | null>();
+  /** Solo visual (asterisco): la validacion es del control del formulario. */
+  readonly required = input(false);
 
   protected readonly text = new FormControl<string | Option>('', { nonNullable: true });
   protected readonly options = signal<Option[]>([]);
@@ -85,16 +89,20 @@ export class EntityPickerComponent implements ControlValueAccessor, OnInit {
   protected readonly searched = signal(false);
   protected readonly disabled = signal(false);
   private selectedLabel = '';
+  /** Al enfocar sin haber buscado se muestran las primeras opciones, sin obligar a escribir. */
+  private readonly focused = new Subject<string>();
   private readonly destroyRef = inject(DestroyRef);
   private onChange: (value: number | null) => void = () => undefined;
   private onTouched: () => void = () => undefined;
 
   ngOnInit(): void {
-    this.text.valueChanges
+    const typed = this.text.valueChanges.pipe(
+      filter((value): value is string => typeof value === 'string'),
+      debounceTime(300),
+      distinctUntilChanged(),
+    );
+    merge(typed, this.focused)
       .pipe(
-        filter((value): value is string => typeof value === 'string'),
-        debounceTime(300),
-        distinctUntilChanged(),
         tap(() => this.searched.set(false)),
         switchMap((term) => this.search()(term.trim()).pipe(catchError(() => of([])))),
         takeUntilDestroyed(this.destroyRef),
@@ -141,6 +149,12 @@ export class EntityPickerComponent implements ControlValueAccessor, OnInit {
     this.selectedLabel = '';
     this.text.setValue('');
     this.onChange(null);
+  }
+
+  protected onFocus(): void {
+    if (!this.searched() && this.selectedId() === null) {
+      this.focused.next(typeof this.text.value === 'string' ? this.text.value : '');
+    }
   }
 
   /** Si el texto no corresponde a una opcion elegida, se restaura la seleccion anterior. */

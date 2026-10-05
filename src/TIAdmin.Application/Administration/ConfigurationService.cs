@@ -152,6 +152,11 @@ public sealed partial class ConfigurationService(
             value = string.Join(",", parts);
         }
 
+        if (key.StartsWith("Assets.Handover.", StringComparison.OrdinalIgnoreCase) && value.Length > 3000)
+        {
+            throw Invalid(item, "no puede exceder 3000 caracteres");
+        }
+
         if (key == "Alerts.License.LowUtilizationPercent" && int.Parse(value, CultureInfo.InvariantCulture) is < 0 or > 100)
         {
             throw Invalid(item, "debe estar entre 0 y 100");

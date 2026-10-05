@@ -21,6 +21,8 @@ import {
 } from '@core/models';
 import { ResourceApi } from '@shared/services/resource-api';
 
+export type HandoverKind = 'delivery' | 'return';
+
 export interface AssetFilters extends QueryParams {
   status?: string | null;
   assetTypeId?: number | null;
@@ -69,6 +71,11 @@ export class AssetsService {
 
   returnAsset(id: number, body: ReturnAssetRequest): Observable<AssetDetailDto> {
     return this.resource.action(id, 'return', body);
+  }
+
+  /** Acta de entrega o devolucion (PDF) de una asignacion (ADR-040). */
+  handover(assetId: number, assignmentId: number, kind: HandoverKind): Observable<DownloadedFile> {
+    return this.api.download(`assets/${assetId}/assignments/${assignmentId}/handover/${kind}`);
   }
 
   assignments(id: number, page: PageRequest): Observable<Paged<AssetAssignmentDto>> {

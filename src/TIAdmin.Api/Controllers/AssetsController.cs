@@ -14,7 +14,11 @@ using Perms = TIAdmin.Application.Common.Constants.Permissions;
 [Route("api/v1/assets")]
 [Authorize]
 [Produces("application/json")]
-public sealed class AssetsController(IAssetService assets, IAssetImportService importer, ITabularFileWriter writer) : ControllerBase
+public sealed class AssetsController(
+    IAssetService assets,
+    IAssetImportService importer,
+    ITabularFileWriter writer,
+    IAssetHandoverService handover) : ControllerBase
 {
     [HttpGet]
     [Authorize(Policy = Perms.AssetsView)]
@@ -183,6 +187,19 @@ public sealed class AssetsController(IAssetService assets, IAssetImportService i
         [FromQuery] PagedQuery query,
         CancellationToken cancellationToken) =>
         Ok(ApiResponse<PagedResult<AssetMovementDto>>.Ok(await assets.GetMovementsAsync(id, query, cancellationToken)));
+
+    /// <summary>
+    /// Acta de entrega (<c>delivery</c>) o devolucion (<c>return</c>) de una asignacion en PDF: la copia archivada
+    /// al asignar/devolver, o generada al momento para asignaciones anteriores (ADR-040).
+    /// </summary>
+    [HttpGet("{id:int}/assignments/{assignmentId:int}/handover/{kind}")]
+    [Authorize(Policy = Perms.AssetsView)]
+    [Produces("application/pdf", "application/json")]
+    public async Task<IActionResult> GetHandoverDocument(int id, int assignmentId, HandoverKind kind, CancellationToken cancellationToken)
+    {
+        var content = await handover.GetAsync(id, assignmentId, kind, cancellationToken);
+        return File(content.Content, content.MimeType, content.FileName);
+    }
 }
 
 [ApiController]
