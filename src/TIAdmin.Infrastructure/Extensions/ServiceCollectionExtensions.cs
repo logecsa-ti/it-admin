@@ -11,6 +11,7 @@ using TIAdmin.Infrastructure.Identity;
 using TIAdmin.Infrastructure.Persistence;
 using TIAdmin.Infrastructure.Persistence.Interceptors;
 using TIAdmin.Infrastructure.Persistence.Seeding;
+using TIAdmin.Infrastructure.Persistence.Repositories;
 using TIAdmin.Infrastructure.Services;
 
 public static class ServiceCollectionExtensions
@@ -48,6 +49,12 @@ public static class ServiceCollectionExtensions
                 provider.GetRequiredService<AuditSaveChangesInterceptor>(),
                 provider.GetRequiredService<AuditTrailInterceptor>());
         });
+
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+        services.AddScoped<ILocationRepository, LocationRepository>();
+        services.AddScoped<IAssetRepository, AssetRepository>();
+        services.AddScoped<IAssetAssignmentRepository, AssetAssignmentRepository>();
 
         services.AddScoped<DatabaseSeeder>();
 

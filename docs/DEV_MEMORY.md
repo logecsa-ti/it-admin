@@ -3,9 +3,9 @@
 **Proyecto:** Sistema Administrativo de Tecnologías de Información (TI Admin)
 **Referencia:** `docs/SPECS.md`, `docs/IMPLEMENTATION_PLAN.md`
 **Fecha de inicio:** 2026-10-02
-**Última actualización:** 2026-10-02
+**Última actualización:** 2026-10-05
 **Estado general:** En progreso
-**Fase actual:** Fase 2 - Autenticación, Autorización y Seguridad (Fase 1 completada)
+**Fase actual:** Fase 3 - Núcleo Organizacional (Fase 2 completada; adelanto de entidades de Fase 4)
 
 ---
 
@@ -15,7 +15,7 @@
 |---|---|---|
 | .NET SDK 10 | ✅ Operativo | 10.0.401 en `C:\Program Files\dotnet` (requiere agregar al PATH) |
 | Node.js | ✅ Operativo | v24.21.0 |
-| Docker | ✅ Operativo | Engine 29.7.2 |
+| Docker | ✅ Operativo | Engine 29.7.2. Si el daemon está apagado, arrancar Docker Desktop antes de `docker compose up -d sqlserver` |
 | Git | ✅ Operativo | v2.55.0 |
 
 **Entorno desbloqueado.** B-01 y B-02 resueltos.
@@ -45,9 +45,10 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 
 | Métrica | Valor |
 |---|---|
-| Fase actual | **Fase 2 - Auth/Authz/Seguridad** (lista para iniciar) |
-| Fases completadas | 2 / 12 (Fase 0, Fase 1) |
-| Tareas completadas (Fase 1) | 8 / 8 |
+| Fase actual | **Fase 3 - Núcleo Organizacional** |
+| Fases completadas | 3 / 12 (Fase 0, 1, 2) |
+| Tareas completadas (Fase 3) | 2 / 5 (Departamentos, Ubicaciones) |
+| Tests | 34 / 34 |
 | Estado | En progreso |
 
 ### Progreso global
@@ -56,9 +57,9 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 |---|---|
 | 0 - Preparación y Fundación | ✅ Completada |
 | 1 - Infraestructura Base | ✅ Completada |
-| 2 - Auth/Authz/Seguridad | ⬜ Pendiente |
-| 3 - Núcleo Organizacional | ⬜ Pendiente |
-| 4 - Activos y Asignaciones | ⬜ Pendiente |
+| 2 - Auth/Authz/Seguridad | ✅ Completada |
+| 3 - Núcleo Organizacional | 🟡 En progreso |
+| 4 - Activos y Asignaciones | 🟡 Entidades y migración creadas (sin endpoints) |
 | 5 - Software/Licencias/Proveedores/Contratos | ⬜ Pendiente |
 | 6 - Help Desk/Solicitudes/SLA | ⬜ Pendiente |
 | 7 - Mantenimientos/Cambios/Compras | ⬜ Pendiente |
@@ -98,6 +99,18 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 2026-10-02 | Fase 1.7 | Recreada la migración y base de datos desde cero | — | Historial limpio: solo `InitialCreate` |
 | 2026-10-02 | Fase 1.8 | **Verificado**: 28/28 tests, `/health` `/health/live` `/health/ready` `/swagger` → 200, seed aplicado (54 perm, 7 roles, 200 role-permisos, 1 admin, 12 tipos, 9 configs) | — | Fase 1 completada |
 | 2026-10-02 | Fase 1 | **Fase 1 completada** (8/8 tareas) | — | Backend base operativo y verificable |
+| 2026-10-02 | Fase 2 | **Fase 2 completada** (commit `ad3b641`): `AuthController` (login/refresh/logout/me/change-password), `JwtTokenService` con refresh token rotativo, `PermissionAuthorizationHandler` + una política por permiso, middleware CorrelationId/ExceptionHandling/SecurityHeaders, rate limiting (global + `login`), CORS fail-closed, `AuditLog` + `AuditTrailInterceptor`, migración `AddAuthenticationAndAudit` | `src/**` | — |
+| 2026-10-02 | Fase 3 | WIP sin commit: repositorios + `UnitOfWork`, CRUD `DepartmentsController` / `LocationsController`, validadores, entidades `Asset` / `AssetAssignment` | `src/**` | — |
+| 2026-10-05 | Fase 3 | **Corrección crítica**: el soft delete nunca se aplicaba (`Remove()` borraba físicamente). `AuditSaveChangesInterceptor` ahora convierte `Deleted` → `IsDeleted/DeletedAt/DeletedBy`; `AuditTrailInterceptor` lo registra como `AuditAction.Delete` | `Interceptors/*.cs` | Viola ADR-004 hasta ahora |
+| 2026-10-05 | Fase 3 | Limpieza WIP: eliminado enum `AssetStatus` duplicado en Application; `UnitOfWork` ya no libera el DbContext de DI; `ExistsCodeAsync` considera eliminados (evita 500 por índice único); `UpdateAssetRequest.IsActive` eliminado (Asset no lo tiene) | `Application/**`, `Repositories/**` | ADR-013 |
+| 2026-10-05 | Fase 3 | Paginación/búsqueda/orden en `GET /departments` (`isActive`, `parentId`) y `GET /locations` (`isActive`); validación de padre existente, ciclos y borrado con subdepartamentos (409) | Controllers, Repositories | `PagedQuery` → `PagedResult<TDto>` con proyección |
+| 2026-10-05 | Fase 4 | FKs reales a `Users` para `Assets.CurrentUserId` y `AssetAssignments.UserId/AssignedById/ReturnedById` (Restrict); migración `AddAssetsAndAssignments` generada | `AssetConfigurations.cs`, `Migrations/**` | **No aplicada**: Docker apagado. ADR-014 |
+| 2026-10-05 | Fase 3 | +5 tests (`OrganizationPersistenceTests`: soft delete, auditoría de borrado, códigos reservados, ciclos, búsqueda paginada) sobre EF InMemory con interceptores reales | `Tests/Unit/OrganizationPersistenceTests.cs` | 33/33 verdes |
+| 2026-10-05 | Fase 4 | Migración `AddAssetsAndAssignments` **aplicada** a SQL Server (docker) | — | B-03 resuelto |
+| 2026-10-05 | Fase 2 | **Corrección crítica**: el JWT nunca se validaba. `AddIdentity` fija la cookie de Identity como `DefaultAuthenticate/ChallengeScheme`, que tienen prioridad sobre `AddAuthentication(JwtBearer)`. Todo endpoint protegido devolvía 401 y los 401 redirigían (302) a `/Account/Login`. Ahora todos los esquemas por defecto son JwtBearer | `Program.cs` | Detectado al probar contra SQL Server; los tests no lo cubrían |
+| 2026-10-05 | Fase 2 | Login usa `CheckPasswordSignInAsync` (lockout sin emitir cookie; antes `PasswordSignInAsync` emitía cookie de Identity). Cuenta bloqueada responde 401 `ACCOUNT_LOCKED` (antes 200 con `success:false`) | `AuthController.cs` | API stateless |
+| 2026-10-05 | Fase 2 | **Corrección**: los AuditLog de `Create` guardaban el Id temporal de EF (`-2147482647`). `AuditTrailInterceptor` difiere las altas a `SavedChanges` y las guarda con el Id real (segundo SaveChanges solo con AuditLog) | `AuditTrailInterceptor.cs` | +1 test (34/34) |
+| 2026-10-05 | Fase 3 | **Verificado contra SQL Server**: login, 401 JSON sin token, CRUD departamentos (padre inexistente 400, ciclo 400, borrar con hijos 409, paginación/orden, soft delete + AuditLog Delete, código reservado 400), `GET /locations` paginado | — | Smoke test manual con curl |
 
 ---
 
@@ -128,20 +141,29 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 **Entregables completados:** API .NET 10 arranque con Serilog, Swagger, Identity, health checks y base de datos SQL Server 2022 migrada y sembrada.
 
 ### Fase 2 - Autenticación, Autorización y Seguridad
-**Estado:** Pendiente — es la siguiente
+**Estado:** ✅ Completada | **Tareas:** 5/5 (commit `ad3b641`)
 
-Tareas previstas:
-- [ ] 2.1 Endpoints de login / refresh / me + emisión de JWT con claims de permisos
-- [ ] 2.2 `PermissionAuthorizationHandler` + políticas por permiso
-- [ ] 2.3 Middleware de correlation ID + manejo global de errores con `traceId`
-- [ ] 2.4 Rate limiting (global + endpoint de login), CORS, headers de seguridad
-- [ ] 2.5 Entidad `AuditLog` + interceptor que registre escrituras críticas
+- [x] 2.1 Endpoints de login / refresh / logout / me / change-password + JWT con claims de permisos
+- [x] 2.2 `PermissionAuthorizationHandler` + políticas por permiso (fallback: usuario autenticado)
+- [x] 2.3 Middleware de correlation ID + manejo global de errores con `traceId`
+- [x] 2.4 Rate limiting (global + `login`), CORS fail-closed, headers de seguridad
+- [x] 2.5 Entidad `AuditLog` + `AuditTrailInterceptor`
 
 ### Fase 3 - Núcleo Organizacional
-**Estado:** Pending
+**Estado:** 🟡 En progreso | **Tareas:** 2/5
+
+- [x] 3.3 Departamentos: CRUD, paginación/búsqueda, código único, jerarquía sin ciclos, soft delete
+- [x] 3.4 Ubicaciones: CRUD, paginación/búsqueda, código único, soft delete
+- [ ] 3.1 Usuarios: CRUD `/api/v1/users` (paginación, filtros activo/depto/ubicación), asignación de roles y permisos directos. `ApplicationUser` necesita `DepartmentId`/`LocationId`/`EmployeeCode` (revisar `IdentityEntities.cs`)
+- [ ] 3.2 Roles: CRUD `/api/v1/roles`, asignar/desasignar permisos, listar permisos disponibles (RBAC dinámico)
+- [ ] 3.5 Auditoría explícita en cambios de usuarios/roles/permisos (las entidades de Identity no pasan por `AuditTrailInterceptor`)
+- [ ] Tests funcionales de endpoints (`WebApplicationFactory`) — `Tests/Functional` está vacío
 
 ### Fase 4 - Activos TI y Asignaciones
-**Estado:** Pending
+**Estado:** 🟡 Adelantada parcialmente
+
+- [x] Entidades `Asset` / `AssetAssignment`, configuración Fluent API, repositorios, migración `AddAssetsAndAssignments` (aplicada)
+- [ ] Endpoints `/assets`, `/asset-types`, `/assignments`; flujo asignar/desasignar con historial inmutable; `AssetMovement`
 
 ### Fase 5 - Software/Licenciamiento/Proveedores/Contratos
 **Estado:** Pending
@@ -185,6 +207,8 @@ Tareas previstas:
 | ADR-010 | 2026-10-02 | `PermissionDefinition.Code` se deriva de `Module`+`Action`, no se escribe a mano | Impide que el código y el módulo/acción diverjan (bug detectado por test) | Aprobado |
 | ADR-011 | 2026-10-02 | `TIAdminDbContextFactory` (design-time) en vez de arrancar la API para migrar | Evita exigir secretos JWT y BD viva al ejecutar `dotnet ef` | Aprobado |
 | ADR-012 | 2026-10-02 | Secretos de desarrollo en `dotnet user-secrets` (fuera del repo) | SPECS.md §17/§53; `appsettings.json` queda sin valores sensibles | Aprobado |
+| ADR-013 | 2026-10-05 | Los códigos únicos (`Departments.Code`, `Locations.Code`) quedan reservados aunque el registro se elimine (soft delete) | El índice único cubre eliminados; conserva trazabilidad histórica y evita 500 por violación de índice | Propuesto |
+| ADR-014 | 2026-10-05 | FKs hacia `Users` declaradas solo en Fluent API (`HasOne<ApplicationUser>()`), el dominio guarda ids `int` | Domain no depende de Identity; integridad referencial real (CONVENTIONS §2.2) | Propuesto |
 
 ---
 
@@ -192,11 +216,11 @@ Tareas previstas:
 
 ### Backend (.NET)
 ```powershell
-dotnet build .\TIAdmin.sln
-dotnet test .\TIAdmin.sln
-dotnet ef migrations add <Name> --project TIAdmin.Infrastructure --startup-project TIAdmin.Api
-dotnet ef database update --project TIAdmin.Infrastructure --startup-project TIAdmin.Api
-dotnet run --project TIAdmin.Api
+dotnet build .\TIAdmin.slnx
+dotnet test .\TIAdmin.slnx
+dotnet ef migrations add <Name> --project src/TIAdmin.Infrastructure --startup-project src/TIAdmin.Api --output-dir Persistence/Migrations
+dotnet ef database update --project src/TIAdmin.Infrastructure --startup-project src/TIAdmin.Api
+dotnet run --project src/TIAdmin.Api
 ```
 
 ### Frontend (Angular)
@@ -230,6 +254,7 @@ git log --oneline -5
 |---|---|---|---|
 | B-01 | ~~.NET 10 SDK no instalado~~ | — | ✅ RESUELTO: SDK 10.0.401 instalado |
 | B-02 | ~~Docker Desktop daemon apagado~~ | — | ✅ RESUELTO: Engine 29.7.2 activo |
+| B-03 | ~~Docker Desktop daemon apagado (2026-10-05)~~ | — | ✅ RESUELTO: migración aplicada y endpoints verificados |
 
 ### Decisiones pendientes
 
@@ -245,11 +270,11 @@ git log --oneline -5
 
 ## 8. Próximos Pasos
 
-1. **Fase 2.1**: endpoints de login/refresh/me con emisión de JWT que incluya claims `permission`
-2. **Fase 2.2**: `PermissionAuthorizationHandler` + políticas por permiso (RBAC granular)
-3. **Fase 2.3**: middleware de correlation ID + manejo global de errores con `traceId`
-4. **Fase 2.4**: rate limiting, CORS restringido, headers de seguridad
-5. **Fase 2.5**: entidad `AuditLog` + registro de escrituras críticas
+1. Commit del trabajo de Fase 3 (WIP + correcciones del 2026-10-05)
+2. Tests funcionales (`WebApplicationFactory`) que cubran autenticación JWT real: la regresión de esquemas de Identity pasó desapercibida porque ningún test ejercita el pipeline HTTP
+3. **Fase 3.1**: Usuarios (CRUD + roles/permisos directos)
+4. **Fase 3.2**: Roles (CRUD + asignación de permisos)
+5. **Fase 3.5**: auditoría explícita de cambios en Identity + tests funcionales
 6. Actualizar esta memoria tras cada cambio significativo
 
 ### Comandos de arranque (dev)

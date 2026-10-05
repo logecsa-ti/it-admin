@@ -8,7 +8,7 @@ using TIAdmin.Infrastructure.Identity;
 
 /// <summary>
 /// Contexto principal de persistencia. Aplica convenciones globales:
-/// - Nombres de tablas en singular PascalCase
+/// - Nombres de tablas explicitos en plural PascalCase (ADR-009)
 /// - Soft delete via query filter (SPECS.md seccion 37)
 /// - Timestamps en UTC (SPECS.md seccion 38)
 /// </summary>
@@ -30,6 +30,10 @@ public class TIAdminDbContext : IdentityDbContext<ApplicationUser, ApplicationRo
     public DbSet<Domain.Entities.AuditLog> AuditLogs => Set<Domain.Entities.AuditLog>();
 
     public DbSet<Domain.Entities.RefreshToken> RefreshTokens => Set<Domain.Entities.RefreshToken>();
+
+    public DbSet<Domain.Entities.Asset> Assets => Set<Domain.Entities.Asset>();
+
+    public DbSet<Domain.Entities.AssetAssignment> AssetAssignments => Set<Domain.Entities.AssetAssignment>();
 
     public DbSet<ApplicationPermission> Permissions => Set<ApplicationPermission>();
 
