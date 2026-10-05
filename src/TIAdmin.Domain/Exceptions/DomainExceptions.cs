@@ -30,6 +30,16 @@ public sealed class DomainValidationException : DomainException
     }
 }
 
+/// <summary>
+/// La operacion entra en conflicto con el estado actual (duplicados, registros en uso). Se traduce a 409.
+/// </summary>
+public sealed class ConflictException : DomainException
+{
+    public ConflictException(string code, string message) : base(code, message)
+    {
+    }
+}
+
 public sealed class InvalidOperationException : DomainException
 {
     public InvalidOperationException(string code, string message) : base(code, message)

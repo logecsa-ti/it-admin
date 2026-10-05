@@ -12,6 +12,7 @@ using TIAdmin.Domain.Enums;
 /// <summary>
 /// Registra en AuditLog las operaciones administrativas criticas (SPECS.md seccion 18).
 /// Complementa a AuditSaveChangesInterceptor, que aplica las convenciones de timestamps.
+/// Cubre tambien usuarios, roles y asignaciones de Identity (ADR-015).
 /// Se apoya en ChangeTracker para capturar valores antes/despues de forma reliable.
 /// </summary>
 public sealed class AuditTrailInterceptor(
@@ -27,6 +28,28 @@ public sealed class AuditTrailInterceptor(
     {
         "PasswordHash", "SecurityStamp", "ConcurrencyStamp", "TokenHash",
         "NormalizedEmail", "NormalizedUserName", "LicenseKey"
+    };
+
+    /// <summary>
+    /// Propiedades que cambian como efecto secundario (login, concurrencia, sellos de auditoria).
+    /// Un Update que solo toca estas propiedades no se registra: evita un AuditLog por cada login.
+    /// </summary>
+    private static readonly HashSet<string> NoiseProperties = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ConcurrencyStamp", "SecurityStamp", "LastLoginAt", "AccessFailedCount", "UpdatedAt", "UpdatedBy"
+    };
+
+    /// <summary>
+    /// Entidades de Identity auditadas, con el nombre y modulo con que se registran.
+    /// El catalogo de permisos (ApplicationPermission) no se audita: lo define el codigo.
+    /// </summary>
+    private static readonly Dictionary<Type, (string EntityName, string Module)> IdentityEntities = new()
+    {
+        [typeof(Identity.ApplicationUser)] = ("User", "Users"),
+        [typeof(Microsoft.AspNetCore.Identity.IdentityUserRole<int>)] = ("UserRole", "Users"),
+        [typeof(Identity.ApplicationUserPermission)] = ("UserPermission", "Users"),
+        [typeof(Identity.ApplicationRole)] = ("Role", "Roles"),
+        [typeof(Identity.ApplicationRolePermission)] = ("RolePermission", "Roles")
     };
 
     /// <summary>
@@ -117,8 +140,8 @@ public sealed class AuditTrailInterceptor(
         var entries = pendingCreates
             .Select(entry =>
             {
-                var entityName = entry.Metadata.ClrType.Name;
-                return (AuditAction.Create, ResolveModule(entityName), entityName,
+                var entityName = GetEntityName(entry);
+                return (AuditAction.Create, ResolveModule(entry), entityName,
                     GetEntityId(entry), (string?)null, Serialize(Snapshot(entry, useOriginal: false)));
             })
             .ToList();
@@ -140,7 +163,8 @@ public sealed class AuditTrailInterceptor(
                 continue;
             }
 
-            var entityName = entry.Metadata.ClrType.Name;
+            var entityName = GetEntityName(entry);
+            var module = ResolveModule(entry);
 
             switch (entry.State)
             {
@@ -148,21 +172,25 @@ public sealed class AuditTrailInterceptor(
                     pendingCreates.Add(entry);
                     break;
 
+                // UserManager.UpdateAsync marca todo como modificado; solo cuenta lo que realmente cambio.
+                case EntityState.Modified when !IsSoftDeletion(entry) && !HasMeaningfulChanges(entry):
+                    break;
+
                 // AuditSaveChangesInterceptor ya convirtio el Remove() en soft delete (Modified).
                 case EntityState.Modified when IsSoftDeletion(entry):
-                    entries.Add((AuditAction.Delete, ResolveModule(entityName), entityName,
+                    entries.Add((AuditAction.Delete, module, entityName,
                         GetEntityId(entry), Serialize(Snapshot(entry, useOriginal: true)), null));
                     break;
 
                 case EntityState.Modified:
-                    entries.Add((AuditAction.Update, ResolveModule(entityName), entityName,
+                    entries.Add((AuditAction.Update, module, entityName,
                         GetEntityId(entry),
                         Serialize(Snapshot(entry, useOriginal: true)),
                         Serialize(Snapshot(entry, useOriginal: false))));
                     break;
 
                 case EntityState.Deleted:
-                    entries.Add((AuditAction.Delete, ResolveModule(entityName), entityName,
+                    entries.Add((AuditAction.Delete, module, entityName,
                         GetEntityId(entry), Serialize(Snapshot(entry, useOriginal: true)), null));
                     break;
             }
@@ -204,12 +232,21 @@ public sealed class AuditTrailInterceptor(
     }
 
     /// <summary>
-    /// Solo se auditan entidades de dominio. Las de Identity se auditan de forma explicita
-    /// en los endpoints de administracion de usuarios, no en cada operacion.
+    /// Se auditan las entidades de dominio y las de Identity relevantes para la seguridad
+    /// (usuarios, roles y sus asignaciones de roles/permisos).
     /// </summary>
     private static bool ShouldAudit(EntityEntry entry) =>
-        typeof(IAuditableEntity).IsAssignableFrom(entry.Entity.GetType())
-        || typeof(ISoftDeletable).IsAssignableFrom(entry.Entity.GetType());
+        entry.Entity is IAuditableEntity or ISoftDeletable
+        || IdentityEntities.ContainsKey(entry.Metadata.ClrType);
+
+    private static bool HasMeaningfulChanges(EntityEntry entry) =>
+        entry.Properties.Any(p => !NoiseProperties.Contains(p.Metadata.Name)
+            && !Equals(p.OriginalValue, p.CurrentValue));
+
+    private static string GetEntityName(EntityEntry entry) =>
+        IdentityEntities.TryGetValue(entry.Metadata.ClrType, out var identity)
+            ? identity.EntityName
+            : entry.Metadata.ClrType.Name;
 
     private static bool IsSoftDeletion(EntityEntry entry)
     {
@@ -242,11 +279,26 @@ public sealed class AuditTrailInterceptor(
         return snapshot;
     }
 
+    /// <summary>
+    /// Id simple, o "RoleId=3;PermissionId=7" para las tablas de union con clave compuesta.
+    /// </summary>
     private static string GetEntityId(EntityEntry entry)
     {
-        var idProperty = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "Id");
-        return Truncate(idProperty?.CurrentValue?.ToString(), 64) ?? "0";
+        var keyProperties = entry.Metadata.FindPrimaryKey()?.Properties ?? [];
+        var value = keyProperties.Count switch
+        {
+            0 => null,
+            1 => entry.Property(keyProperties[0].Name).CurrentValue?.ToString(),
+            _ => string.Join(";", keyProperties.Select(p => $"{p.Name}={entry.Property(p.Name).CurrentValue}"))
+        };
+
+        return Truncate(value, 64) ?? "0";
     }
+
+    private static string ResolveModule(EntityEntry entry) =>
+        IdentityEntities.TryGetValue(entry.Metadata.ClrType, out var identity)
+            ? identity.Module
+            : ResolveModule(entry.Metadata.ClrType.Name);
 
     private static string ResolveModule(string entityName) => entityName switch
     {

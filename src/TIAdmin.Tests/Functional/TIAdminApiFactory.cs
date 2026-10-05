@@ -109,6 +109,22 @@ public class TIAdminApiFactory : WebApplicationFactory<Program>
         }
     }
 
+    /// <summary>
+    /// Login sin cache: necesario cuando los roles/permisos del usuario cambiaron,
+    /// porque viajan como claims en el token.
+    /// </summary>
+    public async Task<HttpClient> LoginFreshAsync(string userName, string password)
+    {
+        using var anonymous = CreateClient();
+        var response = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { userName, password });
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<ApiEnvelope<LoginData>>();
+
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body!.Data!.AccessToken);
+        return client;
+    }
+
     public async Task<T> WithDbContextAsync<T>(Func<TIAdminDbContext, Task<T>> action)
     {
         ArgumentNullException.ThrowIfNull(action);

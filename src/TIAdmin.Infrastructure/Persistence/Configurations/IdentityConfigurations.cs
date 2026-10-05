@@ -2,6 +2,7 @@ namespace TIAdmin.Infrastructure.Persistence.Configurations;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using TIAdmin.Domain.Entities;
 using TIAdmin.Infrastructure.Identity;
 
 public class ApplicationUserConfiguration : IEntityTypeConfiguration<ApplicationUser>
@@ -23,10 +24,22 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
         builder.Property(u => u.ExternalId).HasMaxLength(128);
 
         builder.HasIndex(u => u.Email).IsUnique().HasFilter(null);
-        builder.HasIndex(u => u.EmployeeCode).IsUnique().HasFilter(null);
+        // Sin filtro, SQL Server solo admite un NULL en un indice unico: el segundo usuario
+        // sin codigo de empleado fallaria.
+        builder.HasIndex(u => u.EmployeeCode).IsUnique().HasFilter("[EmployeeCode] IS NOT NULL");
         builder.HasIndex(u => u.DepartmentId).HasDatabaseName("IX_Users_DepartmentId");
         builder.HasIndex(u => u.LocationId).HasDatabaseName("IX_Users_LocationId");
         builder.HasIndex(u => u.IsActive).HasDatabaseName("IX_Users_IsActive");
+
+        builder.HasOne<Department>()
+            .WithMany()
+            .HasForeignKey(u => u.DepartmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Location>()
+            .WithMany()
+            .HasForeignKey(u => u.LocationId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

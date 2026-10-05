@@ -5,7 +5,7 @@
 **Fecha de inicio:** 2026-10-02
 **Última actualización:** 2026-10-05
 **Estado general:** En progreso
-**Fase actual:** Fase 3 - Núcleo Organizacional (Fase 2 completada; adelanto de entidades de Fase 4)
+**Fase actual:** Fase 4 - Activos y Asignaciones (Fase 3 completada; entidades/migración de Fase 4 ya creadas)
 
 ---
 
@@ -45,10 +45,10 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 
 | Métrica | Valor |
 |---|---|
-| Fase actual | **Fase 3 - Núcleo Organizacional** |
-| Fases completadas | 3 / 12 (Fase 0, 1, 2) |
-| Tareas completadas (Fase 3) | 2 / 5 (Departamentos, Ubicaciones) |
-| Tests | 56 / 56 (35 unit + 21 functional) |
+| Fase actual | **Fase 4 - Activos y Asignaciones** |
+| Fases completadas | 4 / 12 (Fase 0, 1, 2, 3) |
+| Tareas completadas (Fase 3) | 5 / 5 |
+| Tests | 79 / 79 (35 unit + 44 functional) |
 | Estado | En progreso |
 
 ### Progreso global
@@ -58,7 +58,7 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 0 - Preparación y Fundación | ✅ Completada |
 | 1 - Infraestructura Base | ✅ Completada |
 | 2 - Auth/Authz/Seguridad | ✅ Completada |
-| 3 - Núcleo Organizacional | 🟡 En progreso |
+| 3 - Núcleo Organizacional | ✅ Completada |
 | 4 - Activos y Asignaciones | 🟡 Entidades y migración creadas (sin endpoints) |
 | 5 - Software/Licencias/Proveedores/Contratos | ⬜ Pendiente |
 | 6 - Help Desk/Solicitudes/SLA | ⬜ Pendiente |
@@ -112,6 +112,13 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 2026-10-05 | Fase 2 | **Corrección**: los AuditLog de `Create` guardaban el Id temporal de EF (`-2147482647`). `AuditTrailInterceptor` difiere las altas a `SavedChanges` y las guarda con el Id real (segundo SaveChanges solo con AuditLog) | `AuditTrailInterceptor.cs` | +1 test (34/34) |
 | 2026-10-05 | Fase 2 | **Corrección**: CORS nunca permitía ningún origen. `Program.cs` leía la sección `Cors` como `string[]`, pero la configuración es `Cors:AllowedOrigins`. Ahora se enlaza `CorsOptions` | `Program.cs` | Detectado por test funcional |
 | 2026-10-05 | Fase 3 | **Tests funcionales** (`WebApplicationFactory` + EF InMemory, pipeline real): `TIAdminApiFactory` (config vía `UseSetting`, usuario `TI_ASSET_MANAGER` de prueba, login por HTTP cacheado), `AuthAndSecurityTests` (401 JSON sin redirección, token alterado, credenciales inválidas, sin cookies, validación, `/me`, 403 por permiso, rotación y reutilización de refresh token, logout, health, headers de seguridad, correlation id, CORS permitido/denegado), `LoginRateLimitTests` (429), `OrganizationEndpointsTests` (CRUD, soft delete + AuditLog, código reservado, jerarquía, paginación) | `Tests/Functional/**`, `TIAdmin.Tests.csproj` (+`Microsoft.AspNetCore.Mvc.Testing` 10.0.12) | 56/56. Revertir el fix de esquemas JWT hace fallar 11 tests |
+| 2026-10-05 | Fase 3.1 | Usuarios: `IUserManagementService` (Application) + `UserManagementService` (Infrastructure, sobre `UserManager`). `UsersController`: `GET /users` (paginación; filtros `isActive`, `departmentId`, `locationId`, `role`; búsqueda por usuario/correo/nombre/código), `GET /users/{id}`, `POST /users` (rol USER por defecto), `PUT /users/{id}`, `POST /users/{id}/deactivate` y `/activate` (revoca refresh tokens; no sobre uno mismo), `PUT /users/{id}/roles` y `/permissions` (exigen ROLES.MANAGE). Siempre queda ≥1 SUPER_ADMIN activo | `Application/**`, `Infrastructure/Services/**`, `Api/Controllers/UsersController.cs` | ADR-016 |
+| 2026-10-05 | Fase 3.2 | Roles: `IRoleManagementService` + `RoleManagementService`. `GET/POST /roles`, `GET/PUT/DELETE /roles/{id}`, `PUT /roles/{id}/permissions`, `GET /permissions`. Roles de sistema: no se renombran ni eliminan; permisos de SUPER_ADMIN inmutables; no se elimina un rol con usuarios | `RolesController.cs` | RBAC dinámico verificado por test |
+| 2026-10-05 | Fase 3.5 | Auditoría de Identity en `AuditTrailInterceptor` (User, UserRole, UserPermission, Role, RolePermission); ignora Updates sin cambios reales (LastLoginAt/ConcurrencyStamp/...) para no registrar cada login; `EntityId` compuesto `UserId=4;RoleId=3` | `AuditTrailInterceptor.cs` | ADR-015 |
+| 2026-10-05 | Fase 3 | `ConflictException` (dominio) → 409 en `ExceptionHandlingMiddleware`. Reglas de contraseña compartidas (`PasswordPolicyRules`) con mensajes en español | `DomainExceptions.cs`, `AuthValidators.cs` | — |
+| 2026-10-05 | Fase 3 | **Corrección**: índice único `IX_Users_EmployeeCode` sin filtro (SQL Server solo admite un NULL → el 2.º usuario sin código daba 500). Ahora `[EmployeeCode] IS NOT NULL`. FKs `Users.DepartmentId/LocationId` (Restrict). Migración `UsersOrganizationReferences` aplicada | `IdentityConfigurations.cs`, `Migrations/**` | Verificado en SQL Server |
+| 2026-10-05 | Fase 3 | Seeder: los roles de sistema se marcan `IsSystemRole` (antes nunca se asignaba); la matriz por defecto solo se aplica al crear el rol (SUPER_ADMIN siempre recibe todo el catálogo) | `DatabaseSeeder.cs` | ADR-017 |
+| 2026-10-05 | Fase 3 | +23 tests funcionales (`UsersEndpointsTests`, `RolesEndpointsTests`); verificado en SQL Server: usuarios sin código de empleado, auditoría de UserRole, sin auditoría por login, `IsSystemRole` en roles existentes | `Tests/Functional/**` | 79/79 |
 | 2026-10-05 | Fase 3 | **Verificado contra SQL Server**: login, 401 JSON sin token, CRUD departamentos (padre inexistente 400, ciclo 400, borrar con hijos 409, paginación/orden, soft delete + AuditLog Delete, código reservado 400), `GET /locations` paginado | — | Smoke test manual con curl |
 
 ---
@@ -152,15 +159,19 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 - [x] 2.5 Entidad `AuditLog` + `AuditTrailInterceptor`
 
 ### Fase 3 - Núcleo Organizacional
-**Estado:** 🟡 En progreso | **Tareas:** 2/5
+**Estado:** ✅ Completada | **Tareas:** 5/5
 
+- [x] 3.1 Usuarios: CRUD (desactivar en lugar de eliminar), paginación/filtros, roles y permisos directos
+- [x] 3.2 Roles: CRUD, matriz de permisos, catálogo `/permissions` (RBAC dinámico)
 - [x] 3.3 Departamentos: CRUD, paginación/búsqueda, código único, jerarquía sin ciclos, soft delete
 - [x] 3.4 Ubicaciones: CRUD, paginación/búsqueda, código único, soft delete
-- [ ] 3.1 Usuarios: CRUD `/api/v1/users` (paginación, filtros activo/depto/ubicación), asignación de roles y permisos directos. `ApplicationUser` necesita `DepartmentId`/`LocationId`/`EmployeeCode` (revisar `IdentityEntities.cs`)
-- [ ] 3.2 Roles: CRUD `/api/v1/roles`, asignar/desasignar permisos, listar permisos disponibles (RBAC dinámico)
-- [ ] 3.5 Auditoría explícita en cambios de usuarios/roles/permisos (las entidades de Identity no pasan por `AuditTrailInterceptor`)
-- [x] Tests funcionales de endpoints (`WebApplicationFactory`): auth, seguridad, departamentos, ubicaciones
-- [ ] Tests de integración contra SQL Server real (Testcontainers): índices filtrados, `IgnoreQueryFilters`, Ids identity
+- [x] 3.5 Auditoría de usuarios/roles/permisos (vía `AuditTrailInterceptor`)
+- [x] Tests funcionales de endpoints (`WebApplicationFactory`)
+
+Pendientes conocidos (no bloquean):
+- Los cambios de roles/permisos aplican al renovar el access token (≤ `Jwt:AccessTokenMinutes`); un usuario desactivado conserva su access token vigente hasta que expira
+- Sin endpoint de restablecimiento de contraseña por administrador
+- Tests de integración contra SQL Server real (Testcontainers)
 
 ### Fase 4 - Activos TI y Asignaciones
 **Estado:** 🟡 Adelantada parcialmente
@@ -212,6 +223,9 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | ADR-012 | 2026-10-02 | Secretos de desarrollo en `dotnet user-secrets` (fuera del repo) | SPECS.md §17/§53; `appsettings.json` queda sin valores sensibles | Aprobado |
 | ADR-013 | 2026-10-05 | Los códigos únicos (`Departments.Code`, `Locations.Code`) quedan reservados aunque el registro se elimine (soft delete) | El índice único cubre eliminados; conserva trazabilidad histórica y evita 500 por violación de índice | Propuesto |
 | ADR-014 | 2026-10-05 | FKs hacia `Users` declaradas solo en Fluent API (`HasOne<ApplicationUser>()`), el dominio guarda ids `int` | Domain no depende de Identity; integridad referencial real (CONVENTIONS §2.2) | Propuesto |
+| ADR-015 | 2026-10-05 | Auditar las entidades de Identity (usuarios, roles, asignaciones) en `AuditTrailInterceptor`, no endpoint por endpoint | Un único punto; cubre también cambios hechos fuera de los controllers. Se filtran Updates sin cambios reales | Propuesto |
+| ADR-016 | 2026-10-05 | Los usuarios no se eliminan: se desactivan (`USERS.DISABLE`) y se revocan sus refresh tokens. Asignar roles/permisos exige `ROLES.MANAGE` | Conserva historial (asignaciones, tickets, auditoría); asignar roles es escalar privilegios | Propuesto |
+| ADR-017 | 2026-10-05 | El seed aplica la matriz de permisos por defecto solo al crear un rol de sistema; SUPER_ADMIN siempre recibe el catálogo completo | Los cambios hechos vía `/roles` no deben revertirse al reiniciar; permisos nuevos del catálogo llegan a SUPER_ADMIN y se asignan al resto vía API | Propuesto |
 
 ---
 
@@ -273,11 +287,9 @@ git log --oneline -5
 
 ## 8. Próximos Pasos
 
-1. **Fase 3.1**: Usuarios (CRUD + roles/permisos directos)
-2. **Fase 3.2**: Roles (CRUD + asignación de permisos)
-3. **Fase 3.5**: auditoría explícita de cambios en Identity + tests funcionales de usuarios/roles
-4. Tests de integración con Testcontainers (SQL Server real)
-5. Actualizar esta memoria tras cada cambio significativo
+1. **Fase 4**: endpoints `/assets`, `/asset-types`, `/assignments`; flujo asignar/desasignar con historial inmutable (`AssetAssignment`), coherencia `Asset.Status`, `AssetMovement`
+2. Tests de integración con Testcontainers (SQL Server real)
+3. Actualizar esta memoria tras cada cambio significativo
 
 ### Comandos de arranque (dev)
 

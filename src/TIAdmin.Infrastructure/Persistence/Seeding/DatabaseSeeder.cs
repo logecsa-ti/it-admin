@@ -80,9 +80,13 @@ public sealed class DatabaseSeeder(
         foreach (var roleName in SystemRoles.All)
         {
             var role = await roleManager.FindByNameAsync(roleName).ConfigureAwait(false);
+            var created = false;
             if (role is null)
             {
-                role = new ApplicationRole(roleName, SystemRoles.Descriptions.GetValueOrDefault(roleName));
+                role = new ApplicationRole(roleName, SystemRoles.Descriptions.GetValueOrDefault(roleName))
+                {
+                    IsSystemRole = true
+                };
                 var result = await roleManager.CreateAsync(role).ConfigureAwait(false);
                 if (!result.Succeeded)
                 {
@@ -90,7 +94,21 @@ public sealed class DatabaseSeeder(
                         $"No se pudo crear el rol {roleName}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
                 }
 
+                created = true;
                 logger.LogInformation("Seed: rol {Role} creado.", roleName);
+            }
+            else if (!role.IsSystemRole)
+            {
+                role.IsSystemRole = true;
+                await roleManager.UpdateAsync(role).ConfigureAwait(false);
+            }
+
+            // La matriz por defecto solo se aplica al crear el rol: despues, sus permisos se
+            // administran via /api/v1/roles y el seed no debe deshacer esos cambios.
+            // SUPER_ADMIN es la excepcion: siempre recibe todo el catalogo (incluidos permisos nuevos).
+            if (!created && !string.Equals(roleName, SystemRoles.SuperAdmin, StringComparison.Ordinal))
+            {
+                continue;
             }
 
             var desired = Permissions.ForRole(roleName);

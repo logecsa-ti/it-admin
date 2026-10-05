@@ -81,6 +81,9 @@ public static class ServiceCollectionExtensions
             .AddEntityFrameworkStores<TIAdminDbContext>()
             .AddDefaultTokenProviders();
 
+        services.AddScoped<IUserManagementService, UserManagementService>();
+        services.AddScoped<IRoleManagementService, RoleManagementService>();
+
         return services;
     }
 

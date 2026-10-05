@@ -47,6 +47,7 @@ public sealed class ExceptionHandlingMiddleware(
         {
             EntityNotFoundException notFound => (HttpStatusCode.NotFound, notFound.Code, notFound.Message),
             DomainValidationException validation => (HttpStatusCode.BadRequest, validation.Code, validation.Message),
+            ConflictException conflict => (HttpStatusCode.Conflict, conflict.Code, conflict.Message),
             InvalidOperationException domainInvalid => (HttpStatusCode.BadRequest, domainInvalid.Code, domainInvalid.Message),
             DbUpdateConcurrencyException => (HttpStatusCode.Conflict, "CONCURRENCY_CONFLICT",
                 "El registro fue modificado por otro usuario. Recargue e intente nuevamente."),
