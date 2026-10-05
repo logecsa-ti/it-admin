@@ -1,5 +1,6 @@
 namespace TIAdmin.Infrastructure.Services;
 
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -117,9 +118,9 @@ public sealed class JwtTokenService(
 
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString(CultureInfo.InvariantCulture)),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.NameIdentifier, user.Id.ToString(CultureInfo.InvariantCulture)),
             new(ClaimTypes.Name, user.UserName),
             new(ClaimTypes.Email, user.Email),
             new(TiClaimTypes.CorrelationId, currentUser.CorrelationId ?? Guid.NewGuid().ToString("N"))

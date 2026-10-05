@@ -22,7 +22,7 @@ public class PermissionsTests
     public void AllPermissions_ShouldUseUppercaseModuleDotActionFormat()
     {
         Permissions.All.Should().OnlyContain(p =>
-            p.Code == p.Code.ToUpperInvariant()
+            !p.Code.Any(char.IsLower)
             && p.Code.Contains('.')
             && !p.Code.EndsWith('.')
             && !p.Code.StartsWith('.'));

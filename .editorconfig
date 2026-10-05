@@ -1,0 +1,52 @@
+# Estilo y analisis de codigo (Fase 11). Los analizadores corren en la compilacion
+# (AnalysisLevel=latest-recommended en Directory.Build.props) y en CI las advertencias son errores.
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml,csproj,props,targets,xml,slnx}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+# ---- Convenciones del proyecto ----
+csharp_using_directive_placement = inside_namespace:warning
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_prefer_braces = true:warning
+dotnet_style_qualification_for_field = false:suggestion
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+
+# ---- Reglas desactivadas (decision deliberada) ----
+# CA1848/CA1873: LoggerMessage source generators; el volumen de logs no lo justifica todavia.
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1873.severity = none
+# CA1711/CA1720/CA1716: nombres de dominio (EmailQueue, *Permission, ConfigurationDataType.String,
+# parametros from/to) mas claros que la alternativa; no hay consumidores VB.
+dotnet_diagnostic.CA1711.severity = none
+dotnet_diagnostic.CA1720.severity = none
+dotnet_diagnostic.CA1716.severity = none
+# CA1000: ApiResponse<T>.Ok / PagedResult<T>.Empty son fabricas intencionales.
+dotnet_diagnostic.CA1000.severity = none
+# CA1859: IMaintenanceData unifica a proposito las validaciones de alta y edicion.
+dotnet_diagnostic.CA1859.severity = none
+
+# ---- Codigo generado por EF Core ----
+[**/Migrations/*.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+
+# ---- Pruebas ----
+[src/TIAdmin.Tests/**.cs]
+# Nombres Metodo_Escenario_Resultado.
+dotnet_diagnostic.CA1707.severity = none
+# Arreglos literales y LINQ en aserciones: legibilidad sobre micro-optimizacion.
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.CA1826.severity = none
+dotnet_diagnostic.CA1822.severity = none

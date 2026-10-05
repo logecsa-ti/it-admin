@@ -87,7 +87,7 @@ public class MaintenanceRepository : BaseRepository<Maintenance>, IMaintenanceRe
     public async Task<MaintenanceDto?> GetDtoAsync(int id, DateTime now, CancellationToken cancellationToken = default)
     {
         var rows = await Project(Set.AsNoTracking().Where(m => m.Id == id)).ToListAsync(cancellationToken);
-        return (await CompleteAsync(rows, now, cancellationToken)).FirstOrDefault();
+        return (await CompleteAsync(rows, now, cancellationToken)) is [var first, ..] ? first : null;
     }
 
     public async Task<bool> HasOtherInProgressAsync(int assetId, int excludeId, CancellationToken cancellationToken = default) =>
@@ -298,7 +298,7 @@ public class PurchaseRequestRepository : BaseRepository<PurchaseRequest>, IPurch
     public async Task<PurchaseRequestDto?> GetDtoAsync(int id, CancellationToken cancellationToken = default)
     {
         var rows = await Project(Set.AsNoTracking().Where(p => p.Id == id)).ToListAsync(cancellationToken);
-        return (await CompleteAsync(rows, cancellationToken)).FirstOrDefault();
+        return (await CompleteAsync(rows, cancellationToken)) is [var first, ..] ? first : null;
     }
 
     private IQueryable<PurchaseRequestDto> Project(IQueryable<PurchaseRequest> purchases) =>

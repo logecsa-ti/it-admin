@@ -58,7 +58,7 @@ public sealed class LicensingEndpointsTests(TIAdminApiFactory factory) : IClassF
         (await reveal.Content.ReadFromJsonAsync<ApiEnvelope<KeyData>>(TestJson.Options))!.Data!.LicenseKey.Should().Be(PlainKey);
 
         var audits = await factory.WithDbContextAsync(db => db.AuditLogs
-            .Where(a => a.Module == "Licenses" && a.EntityId == license.Id.ToString())
+            .Where(a => a.Module == "Licenses" && a.EntityId == license.Id.ToString(System.Globalization.CultureInfo.InvariantCulture))
             .ToListAsync());
         audits.Should().Contain(a => a.Action == AuditAction.SensitiveRead);
         audits.Should().OnlyContain(a => (a.NewValues ?? string.Empty).Contains(PlainKey) == false

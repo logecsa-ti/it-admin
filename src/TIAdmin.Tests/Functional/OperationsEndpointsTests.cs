@@ -116,7 +116,7 @@ public sealed class OperationsEndpointsTests(TIAdminApiFactory factory) : IClass
         closed.Status.Should().Be(ChangeStatus.Closed);
 
         var audits = await factory.WithDbContextAsync(db => db.AuditLogs
-            .Where(a => a.Module == "Changes" && a.EntityId == draft.Id.ToString()).CountAsync());
+            .Where(a => a.Module == "Changes" && a.EntityId == draft.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)).CountAsync());
         audits.Should().BeGreaterThan(5, "cada transicion queda auditada en el modulo de cambios");
     }
 

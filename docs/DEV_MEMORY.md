@@ -5,7 +5,7 @@
 **Fecha de inicio:** 2026-10-02
 **Última actualización:** 2026-10-05
 **Estado general:** En progreso
-**Fase actual:** Fase 11 - Calidad/Observabilidad/CI (Fase 10 completada; Fase 9 frontend pendiente)
+**Fase actual:** Fase 9 - Frontend Angular (backend completo: Fases 0-8, 10 y 11)
 
 ---
 
@@ -45,10 +45,10 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 
 | Métrica | Valor |
 |---|---|
-| Fase actual | **Fase 11 - Calidad/Observabilidad/CI** |
-| Fases completadas | 10 / 12 (Fase 0-8 y 10; Fase 9 pendiente) |
-| Tareas completadas (Fase 10) | 6 / 6 |
-| Tests | 219 / 219 (119 unit + 100 functional) |
+| Fase actual | **Fase 9 - Frontend Angular** |
+| Fases completadas | 11 / 12 (Fase 0-8, 10 y 11; Fase 9 pendiente) |
+| Tareas completadas (Fase 11) | 5 / 5 |
+| Tests | 226 / 226 (119 unit + 100 functional + 7 integration SQL Server) |
 | Estado | En progreso |
 
 ### Progreso global
@@ -66,7 +66,7 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 8 - Auditoría/Reportes/Dashboard/Config | ✅ Completada |
 | 9 - Frontend Angular | ⬜ Pendiente |
 | 10 - Integraciones/Notificaciones/Archivos/Caché | ✅ Completada |
-| 11 - Calidad/Tests/CI-CD | ⬜ Pendiente |
+| 11 - Calidad/Tests/CI-CD | ✅ Completada |
 | 12 - Despliegue/Go-Live | ⬜ Pendiente |
 
 ---
@@ -150,6 +150,7 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 2026-10-05 | Fase 10 | **Corrección de permisos detectada por test**: el solicitante podía borrar documentos que un agente adjuntó a su ticket | `DocumentService.cs` | — |
 | 2026-10-05 | Fase 10 | `.gitignore`: carpeta de almacenamiento local (`src/TIAdmin.Api/storage/`) para no versionar archivos cargados | `.gitignore` | — |
 | 2026-10-05 | Fase 10 | +12 tests funcionales. Verificado en SQL Server: worker real de alertas (6 notificaciones, sin duplicados), carga/descarga con SHA-256, exportación xlsx/csv, importación, `/health/ready` con almacenamiento | `Tests/Functional/**` | 219/219 |
+| 2026-10-05 | Fase 11 | Observabilidad (logs con usuario, health JSON), 7 pruebas de integración con Testcontainers, analizadores con 0 advertencias, workflow de CI | `Directory.Build.props`, `.editorconfig`, `.github/workflows/ci.yml`, `Tests/Integration/**` | 226/226 |
 | 2026-10-05 | Fase 5 | +34 tests (22 dominio + 12 funcionales). Verificado en SQL Server: filtros de estado efectivo, alertas, clave cifrada (`CfDJ8…`) sin fugas en auditoría, CHECK `UsedQuantity <= Quantity`, carrera sobre el último puesto | `Tests/**` | 151/151 |
 | 2026-10-05 | Fase 3 | **Verificado contra SQL Server**: login, 401 JSON sin token, CRUD departamentos (padre inexistente 400, ciclo 400, borrar con hijos 409, paginación/orden, soft delete + AuditLog Delete, código reservado 400), `GET /locations` paginado | — | Smoke test manual con curl |
 
@@ -297,7 +298,17 @@ Pendientes / decisiones abiertas:
 - Con varias instancias, la cola de correos/exportaciones es en memoria por instancia (las exportaciones pendientes se reencolan al reiniciar)
 
 ### Fase 11 - Calidad/Pruebas/CI-CD/Observabilidad
-**Estado:** Pending
+**Estado:** ✅ Completada | **Tareas:** 5/5
+
+- [x] 11.1 Logging: cada línea de log de la petición lleva UserId/UserName (`UserLogContextMiddleware`) además de CorrelationId; el log de peticiones agrega IP, User-Agent y endpoint (nunca cuerpos). Corregido: cada línea se escribía dos veces (sink de consola en código y en appsettings)
+- [x] 11.2 Health checks: `/health/ready` y `/health` devuelven JSON por componente (database, storage, self) sin detalles de excepción
+- [x] 11.3 Pruebas de integración (`Tests/Integration`, `Category=Integration`): API completa sobre SQL Server 2022 en Testcontainers; traducción a SQL de todos los endpoints de lectura y exportación, seeder idempotente, índice único → 409 DUPLICATE_RECORD, índice filtrado, rowversion, auditoría con usuario/correlación, readiness. `[DockerFact]` las omite sin Docker o con `TIADMIN_SKIP_DOCKER_TESTS=true`
+- [x] 11.4 Análisis estático: `Directory.Build.props` (`AnalysisLevel=latest-recommended`, `EnforceCodeStyleInBuild`; advertencias = errores cuando `CI=true`) y `.editorconfig` con las reglas desactivadas justificadas. 0 advertencias. Corregido: `int.ToString()` dependiente de la cultura en claims JWT
+- [x] 11.5 CI (`.github/workflows/ci.yml`): restore, build Release, paquetes vulnerables (falla si hay), pruebas con cobertura y resultados como artefacto
+
+Decisiones:
+- `dotnet format whitespace` no se aplica en CI: reformatearía los inicializadores compactos del código existente sin beneficio
+- Pruebas de carga (k6/NBomber) y despliegue continuo quedan para la Fase 12
 
 ### Fase 12 - Despliegue/Seguridad Final/Go-Live/Documentación
 **Estado:** Pending
@@ -407,8 +418,8 @@ git log --oneline -5
 
 ## 8. Próximos Pasos
 
-1. **Fase 11**: logging (duplicado de consola, enriquecimiento con usuario), health checks detallados, tests de integración con Testcontainers, analizadores, CI (GitHub Actions)
-2. **Fase 9**: Frontend Angular 22 (`ti-admin-web`) sobre la API completa
+1. **Fase 9**: Frontend Angular 22 (`ti-admin-web`) sobre la API completa; agregar su job al workflow de CI
+2. **Fase 12**: despliegue (IIS/Docker), endurecimiento final, documentación de operación. Decisiones abiertas: Q-03 (PDF), Redis para varias instancias
 3. Actualizar esta memoria tras cada cambio significativo
 
 ### Comandos de arranque (dev)

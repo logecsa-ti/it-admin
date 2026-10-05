@@ -1,0 +1,17 @@
+<Project>
+  <!-- Configuracion comun de compilacion y analisis para todos los proyectos (Fase 11). -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <!-- En CI (GitHub Actions define CI=true) cualquier advertencia rompe la compilacion. -->
+  <PropertyGroup Condition="'$(CI)' == 'true'">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+</Project>

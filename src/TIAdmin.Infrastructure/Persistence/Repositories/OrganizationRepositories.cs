@@ -9,8 +9,8 @@ using TIAdmin.Infrastructure.Persistence;
 public abstract class BaseRepository<TEntity> : IRepository<TEntity>
     where TEntity : class, TIAdmin.Domain.Common.IEntity
 {
-    protected readonly TIAdminDbContext Context;
-    protected readonly DbSet<TEntity> Set;
+    protected TIAdminDbContext Context { get; }
+    protected DbSet<TEntity> Set { get; }
 
     protected BaseRepository(TIAdminDbContext context)
     {

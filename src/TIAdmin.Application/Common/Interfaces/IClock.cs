@@ -1,6 +1,6 @@
-using TIAdmin.Domain.Common;
-
 namespace TIAdmin.Application.Common.Interfaces;
+
+using TIAdmin.Domain.Common;
 
 /// <summary>
 /// Provee la hora actual en UTC. Permite testear sin depender del reloj del sistema.

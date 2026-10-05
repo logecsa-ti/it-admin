@@ -37,13 +37,16 @@ public class TIAdminApiFactory : WebApplicationFactory<Program>
     /// <summary>Limite del endpoint de login; alto por defecto para no interferir entre tests.</summary>
     protected virtual int LoginPermitLimit => 1000;
 
+    /// <summary>Cadena de conexion de SQL Server; null usa EF InMemory (por defecto).</summary>
+    protected virtual string? SqlServerConnectionString => null;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
         // Program.cs lee configuracion antes de Build(): UseSetting la aplica desde el inicio.
         builder.UseEnvironment("Testing");
-        builder.UseSetting("ConnectionStrings:DefaultConnection", "Server=unused;Database=unused");
+        builder.UseSetting("ConnectionStrings:DefaultConnection", SqlServerConnectionString ?? "Server=unused;Database=unused");
         builder.UseSetting("Jwt:Issuer", "https://tiadmin.tests");
         builder.UseSetting("Jwt:Audience", "tiadmin-tests");
         builder.UseSetting("Jwt:SecretKey", "TEST_ONLY_SECRET_KEY_0123456789ABCDEFGHIJ");
@@ -58,6 +61,11 @@ public class TIAdminApiFactory : WebApplicationFactory<Program>
 
         builder.ConfigureTestServices(services =>
         {
+            if (SqlServerConnectionString is not null)
+            {
+                return; // registro real de Infrastructure (SQL Server, interceptores, reintentos)
+            }
+
             // Sustituye SQL Server por InMemory conservando los interceptores reales.
             var sqlServerRegistrations = services
                 .Where(d => d.ServiceType == typeof(DbContextOptions<TIAdminDbContext>)

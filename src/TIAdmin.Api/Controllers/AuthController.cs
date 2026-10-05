@@ -1,5 +1,6 @@
 ﻿namespace TIAdmin.Api.Controllers;
 
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -214,7 +215,7 @@ public sealed class AuthController : ControllerBase
             return Unauthorized(ApiResponse.Fail("Sesion no valida."));
         }
 
-        var user = await userManager.FindByIdAsync(userId.Value.ToString());
+        var user = await userManager.FindByIdAsync(userId.Value.ToString(CultureInfo.InvariantCulture));
         if (user is null)
         {
             return Unauthorized(ApiResponse.Fail("Sesion no valida."));
@@ -239,7 +240,7 @@ public sealed class AuthController : ControllerBase
         AuthenticatedUser user,
         CancellationToken cancellationToken)
     {
-        var entity = await userManager.FindByIdAsync(user.Id.ToString());
+        var entity = await userManager.FindByIdAsync(user.Id.ToString(CultureInfo.InvariantCulture));
 
         return new UserProfileResponse(
             user.Id,

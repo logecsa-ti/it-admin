@@ -29,8 +29,8 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
     .Enrich.WithProperty("Application", "TIAdmin.Api")
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
-    .WriteTo.Console());
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning));
+// Los sinks (consola, archivo) vienen de appsettings: agregar WriteTo.Console aqui duplicaba cada linea.
 
 // ---------- Servicios base ----------
 builder.Services.AddHttpContextAccessor();
@@ -256,6 +256,23 @@ app.UseSerilogRequestLogging(options =>
 {
     options.MessageTemplate =
         "HTTP {RequestMethod} {RequestPath} respondio {StatusCode} en {Elapsed:0.0000} ms";
+
+    // Se evalua al terminar la peticion: el usuario ya esta autenticado. Nunca se registran cuerpos.
+    options.EnrichDiagnosticContext = (diagnostics, httpContext) =>
+    {
+        diagnostics.Set("ClientIp", httpContext.Connection.RemoteIpAddress?.ToString());
+        diagnostics.Set("UserAgent", httpContext.Request.Headers.UserAgent.ToString());
+        if (httpContext.User.Identity?.IsAuthenticated == true)
+        {
+            diagnostics.Set("UserId", httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
+            diagnostics.Set("UserName", httpContext.User.Identity.Name);
+        }
+
+        if (httpContext.GetEndpoint()?.DisplayName is { } endpoint)
+        {
+            diagnostics.Set("Endpoint", endpoint);
+        }
+    };
 });
 
 if (rateLimitOptions.Enabled)
@@ -264,6 +281,7 @@ if (rateLimitOptions.Enabled)
 }
 
 app.UseAuthentication();
+app.UseMiddleware<UserLogContextMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 
@@ -273,8 +291,8 @@ app.MapHealthChecks("/health/live", new()
     Predicate = check => check.Tags.Contains("live")
 }).AllowAnonymous();
 
-app.MapHealthChecks("/health/ready").AllowAnonymous();
-app.MapHealthChecks("/health").AllowAnonymous();
+app.MapHealthChecks("/health/ready", new() { ResponseWriter = TIAdmin.Api.Health.HealthResponseWriter.WriteAsync }).AllowAnonymous();
+app.MapHealthChecks("/health", new() { ResponseWriter = TIAdmin.Api.Health.HealthResponseWriter.WriteAsync }).AllowAnonymous();
 
 // ---------- Seed ----------
 if (app.Configuration.GetValue<bool>("Seed:Enabled"))

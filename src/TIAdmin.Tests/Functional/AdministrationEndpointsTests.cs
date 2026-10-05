@@ -29,7 +29,7 @@ public sealed class AdministrationEndpointsTests(TIAdminApiFactory factory) : IC
         var badRange = await admin.GetAsync("/api/v1/audit?from=2026-12-01&to=2026-01-01");
 
         page.Items.Should().ContainSingle(a => a.Action == AuditAction.Create && a.UserName == TIAdminApiFactory.AdminUserName);
-        single.EntityId.Should().Be(department.Id.ToString());
+        single.EntityId.Should().Be(department.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
         forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden, "TI_ASSET_MANAGER no tiene AUDIT.VIEW");
         (await ErrorCode(badRange, HttpStatusCode.BadRequest)).Should().Be("INVALID_DATE_RANGE");
     }
