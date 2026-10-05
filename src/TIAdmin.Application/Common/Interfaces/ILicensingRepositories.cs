@@ -75,6 +75,8 @@ public interface ISystemSettings
 {
     Task<int> GetIntAsync(string key, int fallback, CancellationToken cancellationToken = default);
 
+    Task<string> GetStringAsync(string key, string fallback, CancellationToken cancellationToken = default);
+
     /// <summary>Lista de enteros separados por coma (p. ej. "90,60,30"); valores invalidos se ignoran.</summary>
     Task<IReadOnlyList<int>> GetIntListAsync(string key, IReadOnlyList<int> fallback, CancellationToken cancellationToken = default);
 }

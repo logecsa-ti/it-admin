@@ -23,6 +23,9 @@ public sealed class UnitOfWork : IUnitOfWork
     private ISoftwareRepository? software;
     private ISoftwareLicenseRepository? licenses;
     private ISoftwareInstallationRepository? installations;
+    private ITicketCategoryRepository? ticketCategories;
+    private ISlaPolicyRepository? slaPolicies;
+    private ITicketRepository? tickets;
 
     public UnitOfWork(TIAdminDbContext context)
     {
@@ -50,6 +53,12 @@ public sealed class UnitOfWork : IUnitOfWork
     public ISoftwareLicenseRepository Licenses => licenses ??= new SoftwareLicenseRepository(context);
 
     public ISoftwareInstallationRepository Installations => installations ??= new SoftwareInstallationRepository(context);
+
+    public ITicketCategoryRepository TicketCategories => ticketCategories ??= new TicketCategoryRepository(context);
+
+    public ISlaPolicyRepository SlaPolicies => slaPolicies ??= new SlaPolicyRepository(context);
+
+    public ITicketRepository Tickets => tickets ??= new TicketRepository(context);
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

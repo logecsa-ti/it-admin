@@ -212,9 +212,10 @@ public static class Permissions
         ],
 
         // Sin ASSETS.VIEW: un usuario final solo consulta sus propios activos (GET /assets/mine), no el inventario (Q-10).
+        // Sin TICKETS.VIEW / REQUESTS.VIEW: ve solo los tickets que solicito, no los de todos (ADR-026).
         SystemRoles.User =>
         [
-            TicketsView, TicketsCreate, RequestsView, RequestsCreate,
+            TicketsCreate, RequestsCreate,
             DashboardView, NotificationsView
         ],
 

@@ -47,6 +47,16 @@ public class TIAdminDbContext : IdentityDbContext<ApplicationUser, ApplicationRo
 
     public DbSet<Domain.Entities.SoftwareInstallation> SoftwareInstallations => Set<Domain.Entities.SoftwareInstallation>();
 
+    public DbSet<Domain.Entities.TicketCategory> TicketCategories => Set<Domain.Entities.TicketCategory>();
+
+    public DbSet<Domain.Entities.SlaPolicy> SlaPolicies => Set<Domain.Entities.SlaPolicy>();
+
+    public DbSet<Domain.Entities.Ticket> Tickets => Set<Domain.Entities.Ticket>();
+
+    public DbSet<Domain.Entities.TicketComment> TicketComments => Set<Domain.Entities.TicketComment>();
+
+    public DbSet<Domain.Entities.TicketStatusHistory> TicketStatusHistory => Set<Domain.Entities.TicketStatusHistory>();
+
     public DbSet<ApplicationPermission> Permissions => Set<ApplicationPermission>();
 
     public DbSet<ApplicationRolePermission> RolePermissions => Set<ApplicationRolePermission>();

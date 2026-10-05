@@ -28,6 +28,12 @@ public interface IUnitOfWork
 
     ISoftwareInstallationRepository Installations { get; }
 
+    ITicketCategoryRepository TicketCategories { get; }
+
+    ISlaPolicyRepository SlaPolicies { get; }
+
+    ITicketRepository Tickets { get; }
+
     /// <summary>
     /// Persiste los cambios. Una violacion de indice unico (p. ej. dos asignaciones
     /// simultaneas del mismo activo) se traduce a <see cref="Domain.Exceptions.ConflictException"/>.

@@ -83,9 +83,7 @@ public class PermissionsTests
     {
         Permissions.ForRole(SystemRoles.User).Should().BeEquivalentTo(new[]
         {
-            Permissions.TicketsView,
             Permissions.TicketsCreate,
-            Permissions.RequestsView,
             Permissions.RequestsCreate,
             Permissions.DashboardView,
             Permissions.NotificationsView
@@ -97,6 +95,13 @@ public class PermissionsTests
     {
         // Q-10: el usuario final solo ve sus activos asignados via GET /assets/mine.
         Permissions.ForRole(SystemRoles.User).Should().NotContain(Permissions.AssetsView);
+    }
+
+    [Fact]
+    public void UserRole_ShouldOnlySeeOwnTickets()
+    {
+        // ADR-026: TICKETS.VIEW / REQUESTS.VIEW significan "ver todos"; el solicitante siempre ve los suyos.
+        Permissions.ForRole(SystemRoles.User).Should().NotContain([Permissions.TicketsView, Permissions.RequestsView]);
     }
 }
 

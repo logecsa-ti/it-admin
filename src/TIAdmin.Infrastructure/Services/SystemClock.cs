@@ -11,11 +11,11 @@ using TIAdmin.Application.Common.Models;
 /// </summary>
 public sealed class SystemClock(IOptions<AppOptions> options) : IClock
 {
-    private readonly TimeZoneInfo timeZone = ResolveTimeZone(options.Value.TimeZone);
+    public TimeZoneInfo TimeZone { get; } = ResolveTimeZone(options.Value.TimeZone);
 
     public DateTime UtcNow => DateTime.UtcNow;
 
-    public DateTime Today => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone).Date;
+    public DateTime Today => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZone).Date;
 
     private static TimeZoneInfo ResolveTimeZone(string? id)
     {

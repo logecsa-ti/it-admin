@@ -5,7 +5,7 @@
 **Fecha de inicio:** 2026-10-02
 **Última actualización:** 2026-10-05
 **Estado general:** En progreso
-**Fase actual:** Fase 6 - Help Desk/Solicitudes/SLA (Fase 5 completada)
+**Fase actual:** Fase 7 - Mantenimientos/Cambios/Compras (Fase 6 completada)
 
 ---
 
@@ -45,10 +45,10 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 
 | Métrica | Valor |
 |---|---|
-| Fase actual | **Fase 6 - Help Desk/Solicitudes/SLA** |
-| Fases completadas | 6 / 12 (Fase 0, 1, 2, 3, 4, 5) |
-| Tareas completadas (Fase 5) | 5 / 5 |
-| Tests | 151 / 151 (83 unit + 68 functional) |
+| Fase actual | **Fase 7 - Mantenimientos/Cambios/Compras** |
+| Fases completadas | 7 / 12 (Fase 0-6) |
+| Tareas completadas (Fase 6) | 5 / 5 |
+| Tests | 183 / 183 (107 unit + 76 functional) |
 | Estado | En progreso |
 
 ### Progreso global
@@ -61,7 +61,7 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 3 - Núcleo Organizacional | ✅ Completada |
 | 4 - Activos y Asignaciones | ✅ Completada |
 | 5 - Software/Licencias/Proveedores/Contratos | ✅ Completada |
-| 6 - Help Desk/Solicitudes/SLA | ⬜ Pendiente |
+| 6 - Help Desk/Solicitudes/SLA | ✅ Completada |
 | 7 - Mantenimientos/Cambios/Compras | ⬜ Pendiente |
 | 8 - Auditoría/Reportes/Dashboard/Config | ⬜ Pendiente |
 | 9 - Frontend Angular | ⬜ Pendiente |
@@ -134,6 +134,11 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 2026-10-05 | General | **Corrección**: `IClock.Today` devolvía la fecha UTC; ahora es la fecha en `App:TimeZone` | `SystemClock.cs` | ADR-024 |
 | 2026-10-05 | General | **Trampas de EF Core detectadas** (regresión atrapada por tests): `IgnoreQueryFilters()` dentro de una subconsulta desactiva los filtros de toda la consulta (mostraba activos eliminados); navegar a un principal requerido con soft delete (`c.Vendor.Name`) filtra a los dependientes. Solución: `VendorNameLookup` en consulta aparte | `Repositories/**` | Documentado en CLAUDE.md |
 | 2026-10-05 | Fase 5 | Módulo de auditoría: `SoftwareLicense`/`SoftwareInstallation` → "Licenses" (antes "Software") | `AuditTrailInterceptor.cs` | — |
+| 2026-10-05 | Seguridad | Q-09 resuelta (ADR-021 aprobado): `DataProtection:CertificateThumbprint` cifra el anillo de claves; la API no arranca si el certificado no existe. Verificado con certificado autofirmado temporal. Checklist de Fase 12 actualizado | `ServiceCollectionExtensions.cs`, `IMPLEMENTATION_PLAN.md` | Commit `78b0613` |
+| 2026-10-05 | Fase 6 | Dominio: `Ticket` (flujo, asignación, aprobación, SLA), `TicketStatusRules`, `TicketCategory`, `SlaPolicy` + `SlaPolicySelector`, `TicketComment`, `TicketStatusHistory`, `BusinessHours` (cálculo laboral en la zona de la organización); `TicketType` | `Domain/Entities/HelpDeskEntities.cs`, `Domain/Services/BusinessHours.cs` | ADR-025, ADR-027 |
+| 2026-10-05 | Fase 6 | `TicketService`, `HelpDeskConfigService`; endpoints `/tickets` (+status, assign, approve, reject, comments, history), `/ticket-categories`, `/sla-policies`; `IClock.TimeZone`; `ISystemSettings.GetStringAsync`; seed de categorías, SLA y `Tickets.NumberPrefix` | `Application/HelpDesk/**`, `Api/Controllers/TicketsController.cs` | ADR-026, ADR-028, ADR-029 |
+| 2026-10-05 | Fase 6 | Migración `AddHelpDesk` aplicada (5 tablas, 3 CHECK, índice único filtrado de SLA predeterminado, rowversion en tickets) + datos: USER pierde TICKETS.VIEW y REQUESTS.VIEW | `Migrations/**` | Verificado en SQL Server |
+| 2026-10-05 | Fase 6 | +32 tests (24 unidad: horario laboral, selección de SLA, flujo de tickets; 8 funcionales). Verificado en SQL Server: numeración, alcance por usuario, filtro de vencidos, vencimientos correctos en hora de Managua | `Tests/**` | 183/183 |
 | 2026-10-05 | Fase 5 | +34 tests (22 dominio + 12 funcionales). Verificado en SQL Server: filtros de estado efectivo, alertas, clave cifrada (`CfDJ8…`) sin fugas en auditoría, CHECK `UsedQuantity <= Quantity`, carrera sobre el último puesto | `Tests/**` | 151/151 |
 | 2026-10-05 | Fase 3 | **Verificado contra SQL Server**: login, 401 JSON sin token, CRUD departamentos (padre inexistente 400, ciclo 400, borrar con hijos 409, paginación/orden, soft delete + AuditLog Delete, código reservado 400), `GET /locations` paginado | — | Smoke test manual con curl |
 
@@ -219,7 +224,21 @@ Pendientes / decisiones abiertas:
 - Documentos/evidencia de licencias y contratos → Fase 10
 
 ### Fase 6 - Help Desk/Solicitudes/SLA
-**Estado:** Pending
+**Estado:** ✅ Completada | **Tareas:** 5/5
+
+- [x] 6.1 Categorías (`/ticket-categories`): tipo (incidente/solicitud), prioridad por defecto, aprobación; seed de 11 categorías
+- [x] 6.2 Tickets (`/tickets`): número `TKT-AAAA-000001`, flujo de estados (SPECS §21.4 + cancelación y reapertura), asignación, comentarios públicos/internos, historial inmutable, concurrencia optimista (rowversion)
+- [x] 6.3 Solicitudes de servicio como tipo de ticket (Q-07 / ADR-025) con aprobación (`/approve`, `/reject`, REQUESTS.APPROVE)
+- [x] 6.4 SLA (`/sla-policies`): política más específica (categoría > prioridad > tipo > departamento), horario laboral en `App:TimeZone`, seed según SPECS §22, una sola predeterminada (índice filtrado)
+- [x] 6.5 Detección de vencidos: estado del SLA calculado en cada consulta, filtro `overdue=true`, `IsSlaBreached` definitivo al resolver
+
+Notas sobre el ERD: `ServiceRequests` y `RequestTypes` no se crearon (Q-07: entidad única, la categoría cumple el papel del tipo de solicitud); la tabla de SLA se llama `SlaPolicies` (el ERD la nombraba `SlaConfigurations`).
+
+Pendientes / decisiones abiertas:
+- Feriados (`BusinessCalendars`) no implementados: el cálculo laboral solo considera días y horas de la política
+- El reloj del SLA no se pausa en `WaitingUser` / `WaitingVendor` (SPECS no lo exige; decidir si se requiere)
+- `REQUESTS.MANAGE` queda sin uso: el flujo de ambos tipos usa TICKETS.*
+- Notificaciones (ticket creado/asignado/vencido) y adjuntos → Fase 10
 
 ### Fase 7 - Mantenimientos/Cambios/Compras
 **Estado:** Pending
@@ -263,6 +282,10 @@ Pendientes / decisiones abiertas:
 | ADR-016 | 2026-10-05 | Los usuarios no se eliminan: se desactivan (`USERS.DISABLE`) y se revocan sus refresh tokens. Asignar roles/permisos exige `ROLES.MANAGE` | Conserva historial (asignaciones, tickets, auditoría); asignar roles es escalar privilegios | Propuesto |
 | ADR-018 | 2026-10-05 | Reglas de estado del activo en la entidad de dominio (`Asset.AssignTo/Return/ChangeStatus`, setters privados); orquestación en un servicio de Application (`AssetService`) | Clean Architecture (CONVENTIONS §1.3): reglas testeables sin BD; los controllers quedan delgados. Patrón para flujos con varias entidades | Propuesto |
 | ADR-019 | 2026-10-05 | Convención EF `UtcDateTimeConverter` para todo `DateTime`: se lee con `Kind=Utc` | ADR-005; JSON con `Z` para que el frontend convierta a la zona configurada | Propuesto |
+| ADR-026 | 2026-10-05 | Visibilidad de tickets: TICKETS.VIEW / REQUESTS.VIEW = ver todos los incidentes / solicitudes; el solicitante siempre ve los suyos (sin comentarios internos); un ticket ajeno responde 404. El rol USER pierde ambos permisos (migración en `AddHelpDesk`) | Mismo principio que Q-10 (privacidad del usuario final) sin agregar permisos al catálogo | Propuesto |
+| ADR-027 | 2026-10-05 | SLA: política más específica gana; vencimientos en horario laboral calculados en el dominio (`BusinessHours`) en `App:TimeZone`; en solicitudes con aprobación el reloj arranca al aprobar; el estado del SLA se calcula en cada consulta y `IsSlaBreached` se fija al resolver | Configurable sin código (SPECS §22); sin job para marcar vencidos | Propuesto |
+| ADR-028 | 2026-10-05 | Número de ticket `PREFIJO-AAAA-{Id:000000}` asignado tras insertar (prefijo en `Tickets.NumberPrefix`) | Único y sin carreras sin depender de secuencias de SQL Server (los tests usan InMemory); no reinicia por año | Propuesto |
+| ADR-029 | 2026-10-05 | Categorías de ticket y políticas de SLA se administran con CONFIGURATION.MANAGE; el flujo de incidentes y solicitudes usa TICKETS.UPDATE/ASSIGN/RESOLVE/CLOSE | Evita agregar permisos (requeriría migraciones de datos por rol, ADR-017) | Propuesto |
 | ADR-025 | 2026-10-05 | Tickets y solicitudes de servicio son una sola entidad (`Ticket` con un tipo: incidente / solicitud), con flujo, SLA, comentarios y numeracion compartidos | Decision de negocio (Q-07); evita duplicar flujo de estados, SLA y reportes | Aprobado |
 | ADR-021 | 2026-10-05 | `LicenseKey` cifrada con ASP.NET Core Data Protection detrás de `ISecretProtector`; nunca se proyecta en listados/detalle; `GET /licenses/{id}/key` exige LICENSES.MANAGE, responde `no-store` y audita `SensitiveRead` | Q-09 resuelta: misma protección que Always Encrypted frente a fuga de backups, sin su costo operativo ni romper los tests. Producción: `DataProtection:KeysPath` + `DataProtection:CertificateThumbprint` (anillo cifrado con certificado), respaldo del anillo y certificado aparte de la BD | Aprobado |
 | ADR-022 | 2026-10-05 | `UsedQuantity` se deriva de instalaciones licencia↔activo (tabla opcional del ERD); sin sobreasignación garantizada por dominio + CHECK + rowversion en `SoftwareLicenses`. La alerta "sobreasignación" se reporta como `Exhausted` (sin puestos libres) | Uso real trazable por activo; el criterio del plan prohíbe sobreasignar. Verificado: 6 instalaciones concurrentes sobre 1 puesto → 1×200, 5×409 | Propuesto |
@@ -332,7 +355,7 @@ git log --oneline -5
 
 ## 8. Próximos Pasos
 
-1. **Fase 6**: TicketCategories, Tickets (número autogenerado, transiciones de estado, comentarios internos/externos), solicitudes de servicio como tipo de ticket (Q-07: entidad única), SLA configurable (horario laboral) y detección de vencidos
+1. **Fase 7**: Mantenimientos (preventivo/correctivo/emergencia, vinculados a activo/ticket/proveedor), Gestión de cambios (flujo con aprobación y plan de rollback), Compras TI
 2. Tests de integración con Testcontainers (SQL Server real)
 3. Actualizar esta memoria tras cada cambio significativo
 

@@ -11,6 +11,9 @@ public interface IClock
 
     /// <summary>Fecha de negocio en la zona horaria de la organizacion (App:TimeZone).</summary>
     DateTime Today { get; }
+
+    /// <summary>Zona horaria de la organizacion (App:TimeZone): horarios laborales del SLA.</summary>
+    TimeZoneInfo TimeZone { get; }
 }
 
 /// <summary>

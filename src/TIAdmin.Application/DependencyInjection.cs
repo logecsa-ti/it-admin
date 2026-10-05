@@ -2,6 +2,7 @@ namespace TIAdmin.Application;
 
 using Microsoft.Extensions.DependencyInjection;
 using TIAdmin.Application.Assets;
+using TIAdmin.Application.HelpDesk;
 using TIAdmin.Application.Licensing;
 using TIAdmin.Application.Vendors;
 
@@ -17,6 +18,8 @@ public static class DependencyInjection
         services.AddScoped<IContractService, ContractService>();
         services.AddScoped<ISoftwareService, SoftwareService>();
         services.AddScoped<ILicenseService, LicenseService>();
+        services.AddScoped<ITicketService, TicketService>();
+        services.AddScoped<IHelpDeskConfigService, HelpDeskConfigService>();
 
         return services;
     }

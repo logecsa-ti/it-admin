@@ -17,6 +17,9 @@ public sealed class SystemSettings(TIAdminDbContext context) : ISystemSettings
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : fallback;
     }
 
+    public async Task<string> GetStringAsync(string key, string fallback, CancellationToken cancellationToken = default) =>
+        await GetValueAsync(key, cancellationToken) is { Length: > 0 } value ? value.Trim() : fallback;
+
     public async Task<IReadOnlyList<int>> GetIntListAsync(string key, IReadOnlyList<int> fallback, CancellationToken cancellationToken = default)
     {
         var value = await GetValueAsync(key, cancellationToken);

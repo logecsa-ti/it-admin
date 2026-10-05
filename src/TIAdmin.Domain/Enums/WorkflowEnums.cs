@@ -12,6 +12,13 @@ public enum TicketStatus
     Cancelled = 7
 }
 
+/// <summary>Q-07 / ADR-025: incidentes y solicitudes de servicio comparten la entidad Ticket.</summary>
+public enum TicketType
+{
+    Incident = 0,
+    ServiceRequest = 1
+}
+
 public enum TicketPriority
 {
     Low = 0,
