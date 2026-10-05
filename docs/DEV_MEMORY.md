@@ -48,7 +48,7 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | Fase actual | **Fase 3 - Núcleo Organizacional** |
 | Fases completadas | 3 / 12 (Fase 0, 1, 2) |
 | Tareas completadas (Fase 3) | 2 / 5 (Departamentos, Ubicaciones) |
-| Tests | 34 / 34 |
+| Tests | 56 / 56 (35 unit + 21 functional) |
 | Estado | En progreso |
 
 ### Progreso global
@@ -110,6 +110,8 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 2026-10-05 | Fase 2 | **Corrección crítica**: el JWT nunca se validaba. `AddIdentity` fija la cookie de Identity como `DefaultAuthenticate/ChallengeScheme`, que tienen prioridad sobre `AddAuthentication(JwtBearer)`. Todo endpoint protegido devolvía 401 y los 401 redirigían (302) a `/Account/Login`. Ahora todos los esquemas por defecto son JwtBearer | `Program.cs` | Detectado al probar contra SQL Server; los tests no lo cubrían |
 | 2026-10-05 | Fase 2 | Login usa `CheckPasswordSignInAsync` (lockout sin emitir cookie; antes `PasswordSignInAsync` emitía cookie de Identity). Cuenta bloqueada responde 401 `ACCOUNT_LOCKED` (antes 200 con `success:false`) | `AuthController.cs` | API stateless |
 | 2026-10-05 | Fase 2 | **Corrección**: los AuditLog de `Create` guardaban el Id temporal de EF (`-2147482647`). `AuditTrailInterceptor` difiere las altas a `SavedChanges` y las guarda con el Id real (segundo SaveChanges solo con AuditLog) | `AuditTrailInterceptor.cs` | +1 test (34/34) |
+| 2026-10-05 | Fase 2 | **Corrección**: CORS nunca permitía ningún origen. `Program.cs` leía la sección `Cors` como `string[]`, pero la configuración es `Cors:AllowedOrigins`. Ahora se enlaza `CorsOptions` | `Program.cs` | Detectado por test funcional |
+| 2026-10-05 | Fase 3 | **Tests funcionales** (`WebApplicationFactory` + EF InMemory, pipeline real): `TIAdminApiFactory` (config vía `UseSetting`, usuario `TI_ASSET_MANAGER` de prueba, login por HTTP cacheado), `AuthAndSecurityTests` (401 JSON sin redirección, token alterado, credenciales inválidas, sin cookies, validación, `/me`, 403 por permiso, rotación y reutilización de refresh token, logout, health, headers de seguridad, correlation id, CORS permitido/denegado), `LoginRateLimitTests` (429), `OrganizationEndpointsTests` (CRUD, soft delete + AuditLog, código reservado, jerarquía, paginación) | `Tests/Functional/**`, `TIAdmin.Tests.csproj` (+`Microsoft.AspNetCore.Mvc.Testing` 10.0.12) | 56/56. Revertir el fix de esquemas JWT hace fallar 11 tests |
 | 2026-10-05 | Fase 3 | **Verificado contra SQL Server**: login, 401 JSON sin token, CRUD departamentos (padre inexistente 400, ciclo 400, borrar con hijos 409, paginación/orden, soft delete + AuditLog Delete, código reservado 400), `GET /locations` paginado | — | Smoke test manual con curl |
 
 ---
@@ -157,7 +159,8 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 - [ ] 3.1 Usuarios: CRUD `/api/v1/users` (paginación, filtros activo/depto/ubicación), asignación de roles y permisos directos. `ApplicationUser` necesita `DepartmentId`/`LocationId`/`EmployeeCode` (revisar `IdentityEntities.cs`)
 - [ ] 3.2 Roles: CRUD `/api/v1/roles`, asignar/desasignar permisos, listar permisos disponibles (RBAC dinámico)
 - [ ] 3.5 Auditoría explícita en cambios de usuarios/roles/permisos (las entidades de Identity no pasan por `AuditTrailInterceptor`)
-- [ ] Tests funcionales de endpoints (`WebApplicationFactory`) — `Tests/Functional` está vacío
+- [x] Tests funcionales de endpoints (`WebApplicationFactory`): auth, seguridad, departamentos, ubicaciones
+- [ ] Tests de integración contra SQL Server real (Testcontainers): índices filtrados, `IgnoreQueryFilters`, Ids identity
 
 ### Fase 4 - Activos TI y Asignaciones
 **Estado:** 🟡 Adelantada parcialmente
@@ -270,12 +273,11 @@ git log --oneline -5
 
 ## 8. Próximos Pasos
 
-1. Commit del trabajo de Fase 3 (WIP + correcciones del 2026-10-05)
-2. Tests funcionales (`WebApplicationFactory`) que cubran autenticación JWT real: la regresión de esquemas de Identity pasó desapercibida porque ningún test ejercita el pipeline HTTP
-3. **Fase 3.1**: Usuarios (CRUD + roles/permisos directos)
-4. **Fase 3.2**: Roles (CRUD + asignación de permisos)
-5. **Fase 3.5**: auditoría explícita de cambios en Identity + tests funcionales
-6. Actualizar esta memoria tras cada cambio significativo
+1. **Fase 3.1**: Usuarios (CRUD + roles/permisos directos)
+2. **Fase 3.2**: Roles (CRUD + asignación de permisos)
+3. **Fase 3.5**: auditoría explícita de cambios en Identity + tests funcionales de usuarios/roles
+4. Tests de integración con Testcontainers (SQL Server real)
+5. Actualizar esta memoria tras cada cambio significativo
 
 ### Comandos de arranque (dev)
 
