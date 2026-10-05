@@ -233,7 +233,7 @@ else
 // CORS restringido a los origenes configurados (SPECS.md seccion 17).
 // Sin origenes configurados se aplica una politica vacia: fallo cerrado.
 var allowedOrigins = builder.Configuration.GetSection(CorsOptions.SectionName)
-    .Get<string[]>() ?? [];
+    .Get<CorsOptions>()?.AllowedOrigins ?? [];
 
 app.UseCors(policy =>
 {
