@@ -29,6 +29,8 @@ public sealed class UnitOfWork : IUnitOfWork
     private IMaintenanceRepository? maintenances;
     private IChangeRequestRepository? changeRequests;
     private IPurchaseRequestRepository? purchaseRequests;
+    private IAuditLogRepository? auditLogs;
+    private ISystemConfigurationRepository? configurations;
 
     public UnitOfWork(TIAdminDbContext context)
     {
@@ -68,6 +70,10 @@ public sealed class UnitOfWork : IUnitOfWork
     public IChangeRequestRepository ChangeRequests => changeRequests ??= new ChangeRequestRepository(context);
 
     public IPurchaseRequestRepository PurchaseRequests => purchaseRequests ??= new PurchaseRequestRepository(context);
+
+    public IAuditLogRepository AuditLogs => auditLogs ??= new AuditLogRepository(context);
+
+    public ISystemConfigurationRepository Configurations => configurations ??= new SystemConfigurationRepository(context);
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

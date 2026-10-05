@@ -9,7 +9,8 @@ using TIAdmin.Domain.Enums;
 using TIAdmin.Infrastructure.Persistence;
 
 /// <summary>Lee SystemConfigurations; usa el valor por defecto del seed si falta o es invalido.</summary>
-public sealed class SystemSettings(TIAdminDbContext context) : ISystemSettings
+/// <remarks>Los parametros de tipo Encrypted se descifran al leerse (se guardan con ISecretProtector).</remarks>
+public sealed class SystemSettings(TIAdminDbContext context, ISecretProtector secretProtector) : ISystemSettings
 {
     public async Task<int> GetIntAsync(string key, int fallback, CancellationToken cancellationToken = default)
     {
@@ -40,12 +41,24 @@ public sealed class SystemSettings(TIAdminDbContext context) : ISystemSettings
         return parsed.Count > 0 ? parsed : fallback;
     }
 
-    private async Task<string?> GetValueAsync(string key, CancellationToken cancellationToken) =>
-        await context.SystemConfigurations
+    private async Task<string?> GetValueAsync(string key, CancellationToken cancellationToken)
+    {
+        var row = await context.SystemConfigurations
             .AsNoTracking()
             .Where(c => c.Key == key)
-            .Select(c => c.Value ?? c.DefaultValue)
+            .Select(c => new { c.Value, c.DefaultValue, c.DataType })
             .FirstOrDefaultAsync(cancellationToken);
+
+        if (row is null)
+        {
+            return null;
+        }
+
+        // El valor por defecto de un parametro cifrado se siembra en claro; el valor editado, cifrado.
+        return row.DataType == ConfigurationDataType.Encrypted && row.Value is { } protectedValue
+            ? secretProtector.Unprotect(protectedValue)
+            : row.Value ?? row.DefaultValue;
+    }
 }
 
 /// <summary>

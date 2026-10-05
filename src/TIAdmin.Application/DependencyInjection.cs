@@ -1,11 +1,13 @@
 namespace TIAdmin.Application;
 
 using Microsoft.Extensions.DependencyInjection;
+using TIAdmin.Application.Administration;
 using TIAdmin.Application.Common;
 using TIAdmin.Application.Assets;
 using TIAdmin.Application.HelpDesk;
 using TIAdmin.Application.Licensing;
 using TIAdmin.Application.Operations;
+using TIAdmin.Application.Reporting;
 using TIAdmin.Application.Vendors;
 
 public static class DependencyInjection
@@ -26,6 +28,10 @@ public static class DependencyInjection
         services.AddScoped<IMaintenanceService, MaintenanceService>();
         services.AddScoped<IChangeService, ChangeService>();
         services.AddScoped<IPurchaseService, PurchaseService>();
+        services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IReportService, ReportService>();
+        services.AddScoped<IAuditQueryService, AuditQueryService>();
+        services.AddScoped<IConfigurationService, ConfigurationService>();
 
         return services;
     }

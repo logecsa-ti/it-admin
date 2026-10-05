@@ -62,6 +62,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<ISystemSettings, SystemSettings>();
         services.AddScoped<IAuditLogger, AuditLogger>();
+        services.AddScoped<IReportingQueries, Reporting.ReportingQueries>();
 
         AddSecretProtection(services, configuration);
 

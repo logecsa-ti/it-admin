@@ -274,7 +274,8 @@ public sealed class DatabaseSeeder(
             .Select(d => new SystemConfiguration
             {
                 Key = d.Key,
-                Value = d.Value,
+                // Un parametro cifrado nace sin valor: aplica el por defecto hasta que se edite (ya cifrado).
+                Value = d.Type == ConfigurationDataType.Encrypted ? null : d.Value,
                 DefaultValue = d.Value,
                 Group = d.Group,
                 DataType = d.Type,
