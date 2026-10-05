@@ -631,6 +631,8 @@ Fases:
 3. **Seguridad Hardening Final**
 - [ ] Revisar OWASP Top 10: validaciones, authz, rate limiting, headers, CORS estricto.
 - [ ] Rotación de secrets, JWT secrets por ambiente.
+- [ ] Data Protection (ADR-021, cifra `LicenseKey`): configurar `DataProtection:KeysPath` en un volumen persistente fuera de la BD (compartido si hay varias instancias) y `DataProtection:CertificateThumbprint` con un certificado instalado en `CurrentUser/My` o `LocalMachine/My` de la cuenta del servicio. La API no arranca si el certificado configurado no existe.
+- [ ] Respaldar el anillo de claves y el certificado (con su clave privada) aparte de los backups de BD; sin ellos las claves de licencia cifradas son irrecuperables. Documentar la renovación del certificado antes de su vencimiento (las claves antiguas deben seguir pudiendo descifrarse).
 - [ ] Auditoría completa habilitada en prod.
 - [ ] Deshabilitar Swagger en Production (o proteger).
 - [ ] MFA preparado vía OIDC (Entra ID).

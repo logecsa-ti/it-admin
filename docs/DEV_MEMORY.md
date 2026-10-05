@@ -214,7 +214,7 @@ Pendientes / decisiones abiertas:
 - [x] 5.5 Alertas (`/alerts/licenses`, `/alerts/contracts`) con umbrales de `SystemConfigurations`
 
 Pendientes / decisiones abiertas:
-- Q-09 sigue abierta formalmente (ADR-021 propone Data Protection detrás de `ISecretProtector`). **Producción**: configurar `DataProtection:KeysPath` en almacenamiento persistente y protegido; si se pierde el anillo de claves, las claves de licencia cifradas son irrecuperables
+- Q-09 resuelta (ADR-021). **Producción**: `DataProtection:KeysPath` (persistente, compartido entre instancias) y `DataProtection:CertificateThumbprint`; respaldar anillo + certificado aparte de la BD (checklist Fase 12)
 - Notificación activa de alertas (email/internas) y scheduler → Fase 10
 - Documentos/evidencia de licencias y contratos → Fase 10
 
@@ -263,7 +263,8 @@ Pendientes / decisiones abiertas:
 | ADR-016 | 2026-10-05 | Los usuarios no se eliminan: se desactivan (`USERS.DISABLE`) y se revocan sus refresh tokens. Asignar roles/permisos exige `ROLES.MANAGE` | Conserva historial (asignaciones, tickets, auditoría); asignar roles es escalar privilegios | Propuesto |
 | ADR-018 | 2026-10-05 | Reglas de estado del activo en la entidad de dominio (`Asset.AssignTo/Return/ChangeStatus`, setters privados); orquestación en un servicio de Application (`AssetService`) | Clean Architecture (CONVENTIONS §1.3): reglas testeables sin BD; los controllers quedan delgados. Patrón para flujos con varias entidades | Propuesto |
 | ADR-019 | 2026-10-05 | Convención EF `UtcDateTimeConverter` para todo `DateTime`: se lee con `Kind=Utc` | ADR-005; JSON con `Z` para que el frontend convierta a la zona configurada | Propuesto |
-| ADR-021 | 2026-10-05 | `LicenseKey` cifrada con ASP.NET Core Data Protection detrás de `ISecretProtector`; nunca se proyecta en listados/detalle; `GET /licenses/{id}/key` exige LICENSES.MANAGE, responde `no-store` y audita `SensitiveRead` | Q-09 (propuesta). Intercambiable por Always Encrypted sin tocar Application | Propuesto |
+| ADR-025 | 2026-10-05 | Tickets y solicitudes de servicio son una sola entidad (`Ticket` con un tipo: incidente / solicitud), con flujo, SLA, comentarios y numeracion compartidos | Decision de negocio (Q-07); evita duplicar flujo de estados, SLA y reportes | Aprobado |
+| ADR-021 | 2026-10-05 | `LicenseKey` cifrada con ASP.NET Core Data Protection detrás de `ISecretProtector`; nunca se proyecta en listados/detalle; `GET /licenses/{id}/key` exige LICENSES.MANAGE, responde `no-store` y audita `SensitiveRead` | Q-09 resuelta: misma protección que Always Encrypted frente a fuga de backups, sin su costo operativo ni romper los tests. Producción: `DataProtection:KeysPath` + `DataProtection:CertificateThumbprint` (anillo cifrado con certificado), respaldo del anillo y certificado aparte de la BD | Aprobado |
 | ADR-022 | 2026-10-05 | `UsedQuantity` se deriva de instalaciones licencia↔activo (tabla opcional del ERD); sin sobreasignación garantizada por dominio + CHECK + rowversion en `SoftwareLicenses`. La alerta "sobreasignación" se reporta como `Exhausted` (sin puestos libres) | Uso real trazable por activo; el criterio del plan prohíbe sobreasignar. Verificado: 6 instalaciones concurrentes sobre 1 puesto → 1×200, 5×409 | Propuesto |
 | ADR-023 | 2026-10-05 | Contratos: solo se persisten Draft/Active/Terminated/Renewed; Expiring/Expired se derivan de `EndDate` y `RenewalNoticeDays`. Renovar crea un contrato sucesor (`RenewedFromContractId`) | Un estado derivado de fechas no queda desactualizado sin un job; el historial del contrato original se conserva | Propuesto |
 | ADR-024 | 2026-10-05 | `IClock.Today` es la fecha de negocio en `App:TimeZone` (America/Managua), no la fecha UTC | Los vencimientos (`DateOnly`) no deben cambiar a las 18:00 hora local | Propuesto |
@@ -323,15 +324,15 @@ git log --oneline -5
 | Q-01 | ¿AutoMapper o Mapster? | Equipo técnico |
 | Q-02 | ¿Qué librería UI de Angular? | Equipo frontend |
 | Q-06 | ¿Enums persistidos como `int` o `string`? | Equipo técnico |
-| Q-07 | ¿`Tickets` y `ServiceRequests` unificados? | Negocio/TI |
-| Q-09 | ¿Cifrado de `LicenseKey` con Data Protection o SQL Always Encrypted? | Seguridad |
+| ~~Q-07~~ | ~~¿`Tickets` y `ServiceRequests` unificados?~~ → Sí, una sola entidad (ADR-025) | Resuelto 2026-10-05 |
+| ~~Q-09~~ | ~~¿Data Protection o Always Encrypted?~~ → Data Protection con anillo protegido por certificado (ADR-021) | Resuelto 2026-10-05 |
 | ~~Q-10~~ | ~~¿El rol USER debe ver todo el inventario?~~ → No, solo sus activos asignados (ADR-020) | Resuelto 2026-10-05 |
 
 ---
 
 ## 8. Próximos Pasos
 
-1. **Fase 6**: TicketCategories, Tickets (número autogenerado, transiciones de estado, comentarios internos/externos), ServiceRequests, SLA configurable (horario laboral) y detección de vencidos. Decidir Q-07 (¿Tickets y ServiceRequests unificados?)
+1. **Fase 6**: TicketCategories, Tickets (número autogenerado, transiciones de estado, comentarios internos/externos), solicitudes de servicio como tipo de ticket (Q-07: entidad única), SLA configurable (horario laboral) y detección de vencidos
 2. Tests de integración con Testcontainers (SQL Server real)
 3. Actualizar esta memoria tras cada cambio significativo
 

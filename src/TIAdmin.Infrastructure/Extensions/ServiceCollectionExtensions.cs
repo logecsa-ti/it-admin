@@ -1,5 +1,6 @@
 namespace TIAdmin.Infrastructure.Extensions;
 
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -62,19 +63,58 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISystemSettings, SystemSettings>();
         services.AddScoped<IAuditLogger, AuditLogger>();
 
-        // Q-09: cifrado de secretos de negocio. En produccion, DataProtection:KeysPath debe apuntar a un
-        // almacenamiento persistente y protegido; sin el anillo de claves los datos cifrados son irrecuperables.
+        AddSecretProtection(services, configuration);
+
+        services.AddScoped<DatabaseSeeder>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Q-09 / ADR-021: cifrado de secretos de negocio con ASP.NET Core Data Protection.
+    /// <list type="bullet">
+    /// <item><c>DataProtection:KeysPath</c>: carpeta persistente (compartida entre instancias) para el anillo de claves.</item>
+    /// <item><c>DataProtection:CertificateThumbprint</c>: certificado (almacen My de CurrentUser o LocalMachine) que
+    /// cifra el anillo en reposo; sin el, una copia de la carpeta basta para descifrar.</item>
+    /// </list>
+    /// Sin configuracion (desarrollo) se usa el perfil del usuario local. Si se pierde el anillo, las claves de
+    /// licencia cifradas son irrecuperables: respaldarlo junto con el certificado, aparte de la base de datos.
+    /// </summary>
+    private static void AddSecretProtection(IServiceCollection services, IConfiguration configuration)
+    {
         var dataProtection = services.AddDataProtection().SetApplicationName("TIAdmin");
+
         if (configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
         {
             dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
         }
 
+        if (configuration["DataProtection:CertificateThumbprint"] is { Length: > 0 } thumbprint)
+        {
+            dataProtection.ProtectKeysWithCertificate(FindCertificate(thumbprint));
+        }
+
         services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
+    }
 
-        services.AddScoped<DatabaseSeeder>();
+    /// <summary>Falla al arrancar si el certificado configurado no existe: mejor que cifrar sin proteccion.</summary>
+    private static X509Certificate2 FindCertificate(string thumbprint)
+    {
+        var normalized = thumbprint.Replace(" ", string.Empty, StringComparison.Ordinal).ToUpperInvariant();
 
-        return services;
+        foreach (var location in new[] { StoreLocation.CurrentUser, StoreLocation.LocalMachine })
+        {
+            using var store = new X509Store(StoreName.My, location);
+            store.Open(OpenFlags.ReadOnly);
+            var matches = store.Certificates.Find(X509FindType.FindByThumbprint, normalized, validOnly: false);
+            if (matches.Count > 0)
+            {
+                return matches[0];
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"No se encontro el certificado de Data Protection con huella {normalized} en CurrentUser/My ni LocalMachine/My.");
     }
 
     public static IServiceCollection AddIdentity(this IServiceCollection services)
