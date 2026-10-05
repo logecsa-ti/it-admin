@@ -41,6 +41,18 @@ public class TIAdminDbContext : IdentityDbContext<ApplicationUser, ApplicationRo
 
     public DbSet<ApplicationUserPermission> UserPermissions => Set<ApplicationUserPermission>();
 
+    /// <summary>
+    /// ADR-005: todas las fechas son UTC. datetime2 no guarda el Kind, asi que al leer se marca
+    /// como Utc; sin esto se serializan sin "Z" y el frontend las interpretaria como hora local.
+    /// </summary>
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(configurationBuilder);
+
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>().HaveConversion<UtcDateTimeConverter>();
+    }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
