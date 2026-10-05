@@ -9,6 +9,7 @@ public interface IClock
 {
     DateTime UtcNow { get; }
 
+    /// <summary>Fecha de negocio en la zona horaria de la organizacion (App:TimeZone).</summary>
     DateTime Today { get; }
 }
 

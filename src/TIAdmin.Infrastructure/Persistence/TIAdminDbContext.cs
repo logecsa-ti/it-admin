@@ -37,6 +37,16 @@ public class TIAdminDbContext : IdentityDbContext<ApplicationUser, ApplicationRo
 
     public DbSet<Domain.Entities.AssetMovement> AssetMovements => Set<Domain.Entities.AssetMovement>();
 
+    public DbSet<Domain.Entities.Vendor> Vendors => Set<Domain.Entities.Vendor>();
+
+    public DbSet<Domain.Entities.Contract> Contracts => Set<Domain.Entities.Contract>();
+
+    public DbSet<Domain.Entities.Software> Softwares => Set<Domain.Entities.Software>();
+
+    public DbSet<Domain.Entities.SoftwareLicense> SoftwareLicenses => Set<Domain.Entities.SoftwareLicense>();
+
+    public DbSet<Domain.Entities.SoftwareInstallation> SoftwareInstallations => Set<Domain.Entities.SoftwareInstallation>();
+
     public DbSet<ApplicationPermission> Permissions => Set<ApplicationPermission>();
 
     public DbSet<ApplicationRolePermission> RolePermissions => Set<ApplicationRolePermission>();

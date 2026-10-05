@@ -305,8 +305,10 @@ public sealed class AuditTrailInterceptor(
         var n when n.Contains("Asset", StringComparison.OrdinalIgnoreCase) => "Assets",
         var n when n.Contains("Ticket", StringComparison.OrdinalIgnoreCase) => "Tickets",
         var n when n.Contains("Request", StringComparison.OrdinalIgnoreCase) => "Requests",
-        var n when n.Contains("Software", StringComparison.OrdinalIgnoreCase) => "Software",
+        // "License" antes que "Software": SoftwareLicense pertenece al modulo de licencias.
         var n when n.Contains("License", StringComparison.OrdinalIgnoreCase) => "Licenses",
+        var n when n.Contains("Installation", StringComparison.OrdinalIgnoreCase) => "Licenses",
+        var n when n.Contains("Software", StringComparison.OrdinalIgnoreCase) => "Software",
         var n when n.Contains("Vendor", StringComparison.OrdinalIgnoreCase) => "Vendors",
         var n when n.Contains("Contract", StringComparison.OrdinalIgnoreCase) => "Contracts",
         var n when n.Contains("Maintenance", StringComparison.OrdinalIgnoreCase) => "Maintenance",

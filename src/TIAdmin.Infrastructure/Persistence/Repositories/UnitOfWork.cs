@@ -18,6 +18,11 @@ public sealed class UnitOfWork : IUnitOfWork
     private IAssetAssignmentRepository? assetAssignments;
     private IAssetMovementRepository? assetMovements;
     private IAssetTypeRepository? assetTypes;
+    private IVendorRepository? vendors;
+    private IContractRepository? contracts;
+    private ISoftwareRepository? software;
+    private ISoftwareLicenseRepository? licenses;
+    private ISoftwareInstallationRepository? installations;
 
     public UnitOfWork(TIAdminDbContext context)
     {
@@ -35,6 +40,16 @@ public sealed class UnitOfWork : IUnitOfWork
     public IAssetMovementRepository AssetMovements => assetMovements ??= new AssetMovementRepository(context);
 
     public IAssetTypeRepository AssetTypes => assetTypes ??= new AssetTypeRepository(context);
+
+    public IVendorRepository Vendors => vendors ??= new VendorRepository(context);
+
+    public IContractRepository Contracts => contracts ??= new ContractRepository(context);
+
+    public ISoftwareRepository Software => software ??= new SoftwareRepository(context);
+
+    public ISoftwareLicenseRepository Licenses => licenses ??= new SoftwareLicenseRepository(context);
+
+    public ISoftwareInstallationRepository Installations => installations ??= new SoftwareInstallationRepository(context);
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

@@ -130,6 +130,8 @@ public class AssetRepository : BaseRepository<Asset>, IAssetRepository
                 a.Location != null ? a.Location.Name : null,
                 a.DepartmentId,
                 a.Department != null ? a.Department.Name : null,
+                a.VendorId,
+                null,
                 a.ParentAssetId,
                 a.Notes,
                 a.CreatedAt,
@@ -146,7 +148,13 @@ public class AssetRepository : BaseRepository<Asset>, IAssetRepository
             .ToDto(Context.AssetAssignments.AsNoTracking().Where(x => x.AssetId == id && x.IsActive), Context)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return detail with { CurrentAssignment = current };
+        var vendorNames = await VendorNameLookup.GetAsync(Context, [detail.VendorId], cancellationToken);
+
+        return detail with
+        {
+            CurrentAssignment = current,
+            VendorName = detail.VendorId is { } vendorId ? vendorNames.GetValueOrDefault(vendorId) : null
+        };
     }
 
     public async Task<bool> WouldCreateCycleAsync(int assetId, int candidateParentId, CancellationToken cancellationToken = default)

@@ -38,6 +38,8 @@ public record AssetDetailDto(
     string? LocationName,
     int? DepartmentId,
     string? DepartmentName,
+    int? VendorId,
+    string? VendorName,
     int? ParentAssetId,
     string? Notes,
     DateTime CreatedAt,
@@ -111,6 +113,8 @@ public interface IAssetData
 
     int? DepartmentId { get; }
 
+    int? VendorId { get; }
+
     int? ParentAssetId { get; }
 
     string? Notes { get; }
@@ -130,6 +134,7 @@ public record CreateAssetRequest(
     DateOnly? WarrantyExpiration,
     int? LocationId,
     int? DepartmentId,
+    int? VendorId,
     int? ParentAssetId,
     string? Notes) : IAssetData;
 
@@ -146,6 +151,7 @@ public record UpdateAssetRequest(
     DateOnly? WarrantyExpiration,
     int? LocationId,
     int? DepartmentId,
+    int? VendorId,
     int? ParentAssetId,
     string? Notes) : IAssetData;
 

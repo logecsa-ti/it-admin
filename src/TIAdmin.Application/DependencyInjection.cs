@@ -2,6 +2,8 @@ namespace TIAdmin.Application;
 
 using Microsoft.Extensions.DependencyInjection;
 using TIAdmin.Application.Assets;
+using TIAdmin.Application.Licensing;
+using TIAdmin.Application.Vendors;
 
 public static class DependencyInjection
 {
@@ -11,6 +13,10 @@ public static class DependencyInjection
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddScoped<IAssetService, AssetService>();
+        services.AddScoped<IVendorService, VendorService>();
+        services.AddScoped<IContractService, ContractService>();
+        services.AddScoped<ISoftwareService, SoftwareService>();
+        services.AddScoped<ILicenseService, LicenseService>();
 
         return services;
     }

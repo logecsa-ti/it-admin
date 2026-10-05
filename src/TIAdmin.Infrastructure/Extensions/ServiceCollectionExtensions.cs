@@ -1,5 +1,6 @@
 namespace TIAdmin.Infrastructure.Extensions;
 
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -58,6 +59,18 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAssetMovementRepository, AssetMovementRepository>();
         services.AddScoped<IAssetTypeRepository, AssetTypeRepository>();
         services.AddScoped<IUserDirectory, UserDirectory>();
+        services.AddScoped<ISystemSettings, SystemSettings>();
+        services.AddScoped<IAuditLogger, AuditLogger>();
+
+        // Q-09: cifrado de secretos de negocio. En produccion, DataProtection:KeysPath debe apuntar a un
+        // almacenamiento persistente y protegido; sin el anillo de claves los datos cifrados son irrecuperables.
+        var dataProtection = services.AddDataProtection().SetApplicationName("TIAdmin");
+        if (configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
+        {
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        }
+
+        services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
 
         services.AddScoped<DatabaseSeeder>();
 

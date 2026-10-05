@@ -5,7 +5,7 @@
 **Fecha de inicio:** 2026-10-02
 **Última actualización:** 2026-10-05
 **Estado general:** En progreso
-**Fase actual:** Fase 5 - Software/Licencias/Proveedores/Contratos (Fase 4 completada)
+**Fase actual:** Fase 6 - Help Desk/Solicitudes/SLA (Fase 5 completada)
 
 ---
 
@@ -45,10 +45,10 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 
 | Métrica | Valor |
 |---|---|
-| Fase actual | **Fase 5 - Software/Licencias/Proveedores/Contratos** |
-| Fases completadas | 5 / 12 (Fase 0, 1, 2, 3, 4) |
-| Tareas completadas (Fase 4) | 5 / 6 (relación con Documents pasa a Fase 10) |
-| Tests | 117 / 117 (61 unit + 56 functional) |
+| Fase actual | **Fase 6 - Help Desk/Solicitudes/SLA** |
+| Fases completadas | 6 / 12 (Fase 0, 1, 2, 3, 4, 5) |
+| Tareas completadas (Fase 5) | 5 / 5 |
+| Tests | 151 / 151 (83 unit + 68 functional) |
 | Estado | En progreso |
 
 ### Progreso global
@@ -60,7 +60,7 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 2 - Auth/Authz/Seguridad | ✅ Completada |
 | 3 - Núcleo Organizacional | ✅ Completada |
 | 4 - Activos y Asignaciones | ✅ Completada |
-| 5 - Software/Licencias/Proveedores/Contratos | ⬜ Pendiente |
+| 5 - Software/Licencias/Proveedores/Contratos | ✅ Completada |
 | 6 - Help Desk/Solicitudes/SLA | ⬜ Pendiente |
 | 7 - Mantenimientos/Cambios/Compras | ⬜ Pendiente |
 | 8 - Auditoría/Reportes/Dashboard/Config | ⬜ Pendiente |
@@ -128,6 +128,13 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 2026-10-05 | General | **Corrección**: las fechas se devolvían sin `Z` (datetime2 no guarda el Kind → `Unspecified`); el frontend las habría interpretado como hora local (−6 h en Managua). `UtcDateTimeConverter` como convención para todo `DateTime`/`DateTime?` (sin cambio de esquema) | `TIAdminDbContext.cs`, `UtcDateTimeConverter.cs` | ADR-019. Verificado en SQL Server |
 | 2026-10-05 | Fase 4 | +37 tests: `AssetTests` (dominio, sin BD) y `AssetsEndpointsTests` (ciclo de vida completo con historial, estados, movimientos, permisos, tipos). Verificado en SQL Server: proyecciones con subconsultas, historial de activos eliminados, serial reservado | `Tests/**` | 116/116 |
 | 2026-10-05 | Fase 4 | **Q-10 resuelto**: el rol USER pierde `ASSETS.VIEW` (solo `GET /assets/mine`). Matriz en `Permissions.ForRole` + migración de datos `RemoveAssetsViewFromUserRole` para bases existentes (aplicada; verificado: USER → 403 en `/assets`, 200 en `/assets/mine`) | `Permissions.cs`, `Migrations/**`, tests | ADR-020. 117/117 |
+| 2026-10-05 | Fase 5 | Dominio: `Vendor`, `Contract` (ciclo de vida + `ContractStatusRules`), `Software`, `SoftwareLicense` (`Install`/`Uninstall`/`SetQuantity`), `SoftwareInstallation`; `AuditAction.SensitiveRead` | `Domain/Entities/VendorEntities.cs`, `SoftwareEntities.cs` | ADR-022, ADR-023 |
+| 2026-10-05 | Fase 5 | Servicios `VendorService`, `ContractService`, `SoftwareService`, `LicenseService`; puertos `ISecretProtector` (Data Protection), `ISystemSettings`, `IAuditLogger`. Endpoints `/vendors`, `/contracts` (+activate/terminate/renew), `/software`, `/licenses` (+key, installations), `/alerts/licenses`, `/alerts/contracts`. Config `Alerts.License.LowUtilizationPercent` (seed) y `DataProtection:KeysPath` | `Application/{Vendors,Licensing}/**`, `Api/Controllers/**` | ADR-021 |
+| 2026-10-05 | Fase 5 | Migración `AddVendorsContractsAndLicensing` aplicada (5 tablas, 5 CHECK, rowversion en licencias, FK `Assets.VendorId`) | `Migrations/**` | — |
+| 2026-10-05 | General | **Corrección**: `IClock.Today` devolvía la fecha UTC; ahora es la fecha en `App:TimeZone` | `SystemClock.cs` | ADR-024 |
+| 2026-10-05 | General | **Trampas de EF Core detectadas** (regresión atrapada por tests): `IgnoreQueryFilters()` dentro de una subconsulta desactiva los filtros de toda la consulta (mostraba activos eliminados); navegar a un principal requerido con soft delete (`c.Vendor.Name`) filtra a los dependientes. Solución: `VendorNameLookup` en consulta aparte | `Repositories/**` | Documentado en CLAUDE.md |
+| 2026-10-05 | Fase 5 | Módulo de auditoría: `SoftwareLicense`/`SoftwareInstallation` → "Licenses" (antes "Software") | `AuditTrailInterceptor.cs` | — |
+| 2026-10-05 | Fase 5 | +34 tests (22 dominio + 12 funcionales). Verificado en SQL Server: filtros de estado efectivo, alertas, clave cifrada (`CfDJ8…`) sin fugas en auditoría, CHECK `UsedQuantity <= Quantity`, carrera sobre el último puesto | `Tests/**` | 151/151 |
 | 2026-10-05 | Fase 3 | **Verificado contra SQL Server**: login, 401 JSON sin token, CRUD departamentos (padre inexistente 400, ciclo 400, borrar con hijos 409, paginación/orden, soft delete + AuditLog Delete, código reservado 400), `GET /locations` paginado | — | Smoke test manual con curl |
 
 ---
@@ -198,7 +205,18 @@ Pendientes / decisiones abiertas:
 - `VendorId` en `Assets` sin FK hasta que exista `Vendors` (Fase 5)
 
 ### Fase 5 - Software/Licenciamiento/Proveedores/Contratos
-**Estado:** Pending
+**Estado:** ✅ Completada | **Tareas:** 5/5
+
+- [x] 5.1 Software: catálogo (nombre + versión únicos), resumen de puestos por producto, baja lógica bloqueada si tiene licencias
+- [x] 5.2 Proveedores: CRUD, nombre único entre no eliminados, estado (Active/Inactive/Blocked), baja lógica bloqueada con contratos abiertos; FK `Assets.VendorId`
+- [x] 5.3 Licencias: clave cifrada (Data Protection) y revelada solo con LICENSES.MANAGE + auditoría `SensitiveRead`; instalaciones licencia↔activo que calculan `UsedQuantity`; sin sobreasignación (dominio + CHECK + rowversion)
+- [x] 5.4 Contratos: Draft → Active → Terminated/Renewed; Expiring/Expired derivados de las fechas; renovación crea un contrato sucesor
+- [x] 5.5 Alertas (`/alerts/licenses`, `/alerts/contracts`) con umbrales de `SystemConfigurations`
+
+Pendientes / decisiones abiertas:
+- Q-09 sigue abierta formalmente (ADR-021 propone Data Protection detrás de `ISecretProtector`). **Producción**: configurar `DataProtection:KeysPath` en almacenamiento persistente y protegido; si se pierde el anillo de claves, las claves de licencia cifradas son irrecuperables
+- Notificación activa de alertas (email/internas) y scheduler → Fase 10
+- Documentos/evidencia de licencias y contratos → Fase 10
 
 ### Fase 6 - Help Desk/Solicitudes/SLA
 **Estado:** Pending
@@ -245,6 +263,10 @@ Pendientes / decisiones abiertas:
 | ADR-016 | 2026-10-05 | Los usuarios no se eliminan: se desactivan (`USERS.DISABLE`) y se revocan sus refresh tokens. Asignar roles/permisos exige `ROLES.MANAGE` | Conserva historial (asignaciones, tickets, auditoría); asignar roles es escalar privilegios | Propuesto |
 | ADR-018 | 2026-10-05 | Reglas de estado del activo en la entidad de dominio (`Asset.AssignTo/Return/ChangeStatus`, setters privados); orquestación en un servicio de Application (`AssetService`) | Clean Architecture (CONVENTIONS §1.3): reglas testeables sin BD; los controllers quedan delgados. Patrón para flujos con varias entidades | Propuesto |
 | ADR-019 | 2026-10-05 | Convención EF `UtcDateTimeConverter` para todo `DateTime`: se lee con `Kind=Utc` | ADR-005; JSON con `Z` para que el frontend convierta a la zona configurada | Propuesto |
+| ADR-021 | 2026-10-05 | `LicenseKey` cifrada con ASP.NET Core Data Protection detrás de `ISecretProtector`; nunca se proyecta en listados/detalle; `GET /licenses/{id}/key` exige LICENSES.MANAGE, responde `no-store` y audita `SensitiveRead` | Q-09 (propuesta). Intercambiable por Always Encrypted sin tocar Application | Propuesto |
+| ADR-022 | 2026-10-05 | `UsedQuantity` se deriva de instalaciones licencia↔activo (tabla opcional del ERD); sin sobreasignación garantizada por dominio + CHECK + rowversion en `SoftwareLicenses`. La alerta "sobreasignación" se reporta como `Exhausted` (sin puestos libres) | Uso real trazable por activo; el criterio del plan prohíbe sobreasignar. Verificado: 6 instalaciones concurrentes sobre 1 puesto → 1×200, 5×409 | Propuesto |
+| ADR-023 | 2026-10-05 | Contratos: solo se persisten Draft/Active/Terminated/Renewed; Expiring/Expired se derivan de `EndDate` y `RenewalNoticeDays`. Renovar crea un contrato sucesor (`RenewedFromContractId`) | Un estado derivado de fechas no queda desactualizado sin un job; el historial del contrato original se conserva | Propuesto |
+| ADR-024 | 2026-10-05 | `IClock.Today` es la fecha de negocio en `App:TimeZone` (America/Managua), no la fecha UTC | Los vencimientos (`DateOnly`) no deben cambiar a las 18:00 hora local | Propuesto |
 | ADR-020 | 2026-10-05 | El rol USER no ve el inventario (`ASSETS.VIEW` retirado); solo sus activos asignados vía `GET /assets/mine`. Bases existentes: migración de datos `RemoveAssetsViewFromUserRole` | Decisión de negocio (Q-10). Por ADR-017, los cambios de matriz para roles existentes requieren migración de datos | Aprobado |
 | ADR-017 | 2026-10-05 | El seed aplica la matriz de permisos por defecto solo al crear un rol de sistema; SUPER_ADMIN siempre recibe el catálogo completo | Los cambios hechos vía `/roles` no deben revertirse al reiniciar; permisos nuevos del catálogo llegan a SUPER_ADMIN y se asignan al resto vía API | Propuesto |
 
@@ -309,7 +331,7 @@ git log --oneline -5
 
 ## 8. Próximos Pasos
 
-1. **Fase 5**: Vendors, Software, SoftwareLicenses (sin sobreasignación, `LicenseKey` protegida), Contracts con alertas configurables; FK `Assets.VendorId`
+1. **Fase 6**: TicketCategories, Tickets (número autogenerado, transiciones de estado, comentarios internos/externos), ServiceRequests, SLA configurable (horario laboral) y detección de vencidos. Decidir Q-07 (¿Tickets y ServiceRequests unificados?)
 2. Tests de integración con Testcontainers (SQL Server real)
 3. Actualizar esta memoria tras cada cambio significativo
 

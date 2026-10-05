@@ -53,6 +53,11 @@ public class AssetConfiguration : IEntityTypeConfiguration<Asset>
             .HasForeignKey(a => a.ParentAssetId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne<Vendor>()
+            .WithMany()
+            .HasForeignKey(a => a.VendorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // El dominio no conoce ApplicationUser: la FK se declara solo en persistencia.
         builder.HasOne<ApplicationUser>()
             .WithMany()

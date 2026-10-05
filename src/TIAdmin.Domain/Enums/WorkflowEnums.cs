@@ -108,7 +108,10 @@ public enum AuditAction
     Login = 3,
     Logout = 4,
     Export = 5,
-    AccessDenied = 6
+    AccessDenied = 6,
+
+    /// <summary>Lectura de un dato sensible (p. ej. revelar una clave de licencia).</summary>
+    SensitiveRead = 7
 }
 
 public enum NotificationType

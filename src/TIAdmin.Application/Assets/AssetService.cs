@@ -70,7 +70,7 @@ public sealed class AssetService(
             throw new ConflictException("ASSET_CODE_ALREADY_EXISTS", $"El codigo de activo {assetCode} ya existe.");
         }
 
-        await ValidateReferencesAsync(request, assetId: null, currentTypeId: null, cancellationToken);
+        await ValidateReferencesAsync(request, assetId: null, currentTypeId: null, currentVendorId: null, cancellationToken);
 
         var asset = new Asset { AssetCode = assetCode };
         Apply(asset, request);
@@ -86,7 +86,7 @@ public sealed class AssetService(
         ArgumentNullException.ThrowIfNull(request);
 
         var asset = await FindAsync(id, cancellationToken);
-        await ValidateReferencesAsync(request, asset.Id, asset.AssetTypeId, cancellationToken);
+        await ValidateReferencesAsync(request, asset.Id, asset.AssetTypeId, asset.VendorId, cancellationToken);
 
         if (asset.LocationId != request.LocationId)
         {
@@ -212,6 +212,7 @@ public sealed class AssetService(
         IAssetData data,
         int? assetId,
         int? currentTypeId,
+        int? currentVendorId,
         CancellationToken cancellationToken)
     {
         // Un tipo inactivo no admite activos nuevos, pero los existentes pueden conservarlo.
@@ -238,6 +239,16 @@ public sealed class AssetService(
         if (data.DepartmentId is { } departmentId && !await unitOfWork.Departments.ExistsAsync(departmentId, cancellationToken))
         {
             throw new DomainValidationException("DEPARTMENT_NOT_FOUND", "El departamento indicado no existe.");
+        }
+
+        // Un proveedor existente se conserva aunque se haya bloqueado; uno nuevo debe estar activo.
+        if (data.VendorId is { } vendorId && vendorId != currentVendorId)
+        {
+            var vendor = await unitOfWork.Vendors.GetByIdAsync(vendorId, cancellationToken);
+            if (vendor is not { Status: VendorStatus.Active })
+            {
+                throw new DomainValidationException("VENDOR_NOT_AVAILABLE", "El proveedor no existe o no esta activo.");
+            }
         }
 
         if (data.ParentAssetId is { } parentId)
@@ -268,6 +279,7 @@ public sealed class AssetService(
         asset.WarrantyExpiration = data.WarrantyExpiration;
         asset.LocationId = data.LocationId;
         asset.DepartmentId = data.DepartmentId;
+        asset.VendorId = data.VendorId;
         asset.ParentAssetId = data.ParentAssetId;
         asset.Notes = Normalize(data.Notes);
     }

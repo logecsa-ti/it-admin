@@ -185,6 +185,7 @@ public sealed class DatabaseSeeder(
             ("Sla.Default.ResolutionMinutes", "1440", "Sla", ConfigurationDataType.Int, true, "SLA de resolucion por defecto en minutos"),
             ("Alerts.Contract.Days", "90,60,30,15,7", "Alerts", ConfigurationDataType.String, true, "Dias de anticipacion para alertas de contratos"),
             ("Alerts.License.Days", "90,30,14,7", "Alerts", ConfigurationDataType.String, true, "Dias de anticipacion para alertas de licencias"),
+            ("Alerts.License.LowUtilizationPercent", "20", "Alerts", ConfigurationDataType.Int, true, "Porcentaje de uso por debajo del cual una licencia se considera subutilizada"),
             ("Alerts.Maintenance.Days", "7", "Alerts", ConfigurationDataType.Int, true, "Dias de anticipacion para alertas de mantenimiento")
         };
 

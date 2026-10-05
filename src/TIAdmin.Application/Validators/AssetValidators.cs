@@ -67,6 +67,9 @@ internal sealed class AssetDataRules : AbstractValidator<IAssetData>
         RuleFor(x => x.DepartmentId)
             .GreaterThan(0).When(x => x.DepartmentId.HasValue).WithMessage("El departamento debe ser valido.");
 
+        RuleFor(x => x.VendorId)
+            .GreaterThan(0).When(x => x.VendorId.HasValue).WithMessage("El proveedor debe ser valido.");
+
         RuleFor(x => x.ParentAssetId)
             .GreaterThan(0).When(x => x.ParentAssetId.HasValue).WithMessage("El activo padre debe ser valido.");
     }

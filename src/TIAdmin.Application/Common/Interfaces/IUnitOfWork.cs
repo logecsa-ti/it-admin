@@ -18,6 +18,16 @@ public interface IUnitOfWork
 
     IAssetTypeRepository AssetTypes { get; }
 
+    IVendorRepository Vendors { get; }
+
+    IContractRepository Contracts { get; }
+
+    ISoftwareRepository Software { get; }
+
+    ISoftwareLicenseRepository Licenses { get; }
+
+    ISoftwareInstallationRepository Installations { get; }
+
     /// <summary>
     /// Persiste los cambios. Una violacion de indice unico (p. ej. dos asignaciones
     /// simultaneas del mismo activo) se traduce a <see cref="Domain.Exceptions.ConflictException"/>.
