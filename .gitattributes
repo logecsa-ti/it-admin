@@ -1,0 +1,30 @@
+# Normaliza finales de linea: LF en el repositorio, nativo en el checkout.
+# No depende de core.autocrlf de cada clon.
+* text=auto
+
+# Scripts que se ejecutan en contenedores Linux / bash: siempre LF.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+
+# Scripts de Windows: siempre CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Solucion de Visual Studio.
+*.sln text eol=crlf
+*.slnx text eol=crlf
+
+# Binarios.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.dll binary
+*.exe binary
+*.woff binary
+*.woff2 binary
