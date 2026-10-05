@@ -18,7 +18,7 @@ export function toApiError(error: unknown): ApiErrorInfo {
     return { status: 0, message: 'No hay conexion con el servidor. Verifique su red.', details: [] };
   }
 
-  const body = error.error as Partial<ApiEnvelope<unknown>> | null;
+  const body = isEnvelope(error.error) ? error.error : null;
   const details = Array.isArray(body?.errors) ? body.errors : [];
   return {
     status: error.status,
@@ -26,6 +26,14 @@ export function toApiError(error: unknown): ApiErrorInfo {
     details,
     traceId: body?.traceId ?? error.headers?.get('X-Correlation-Id'),
   };
+}
+
+/**
+ * Solo el sobre ApiResponse trae mensajes para el usuario. Un HTML de un proxy o un fallo de parseo
+ * (con fetch, `error.error` es el SyntaxError) no deben mostrarse tal cual.
+ */
+function isEnvelope(body: unknown): body is Partial<ApiEnvelope<unknown>> {
+  return typeof body === 'object' && body !== null && !(body instanceof Error) && ('success' in body || 'errors' in body);
 }
 
 function defaultMessage(status: number): string {
@@ -43,6 +51,9 @@ function defaultMessage(status: number): string {
     case 429:
       return 'Demasiadas solicitudes. Espere un momento.';
     default:
+      if (status >= 200 && status < 300) {
+        return 'El servidor envio una respuesta inesperada. Si persiste, contacte a soporte.';
+      }
       return status >= 500
         ? 'Error interno del servidor. Si persiste, contacte a soporte.'
         : 'No fue posible completar la solicitud.';

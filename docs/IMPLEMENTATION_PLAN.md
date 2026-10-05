@@ -442,53 +442,53 @@ Fases:
 
 ### Tareas
 1. **Estructura y scaffolding**
-- [ ] Crear proyecto Angular 22: `ti-admin-web` (o `src/Web/`).
-- [ ] Arquitectura: `core/`, `shared/`, `layout/`, `features/` (sección 29).
-- [ ] Configurar rutas con lazy loading por feature.
-- [ ] Environment files: `environment.ts`, `environment.qa.ts`, `environment.staging.ts`, `environment.prod.ts`.
-- [ ] SCSS base, tema, variables, diseño responsive.
+- [x] Crear proyecto Angular 22: `ti-admin-web` (o `src/Web/`).
+- [x] Arquitectura: `core/`, `shared/`, `layout/`, `features/` (sección 29).
+- [x] Configurar rutas con lazy loading por feature.
+- [x] Environment files: `environment.ts`, `environment.qa.ts`, `environment.staging.ts`, `environment.prod.ts`.
+- [x] SCSS base, tema, variables, diseño responsive.
 
 2. **Core (Base)**
-- [ ] Modelos TypeScript (DTOs) alineados a API.
-- [ ] Servicios base: `ApiService`, `AuthService`, `HttpErrorHandler`.
-- [ ] Interceptors: Auth (token), Error (401/403, traceId), CorrelationId, Loading global.
-- [ ] Guards: `AuthGuard`, `RoleGuard`, `PermissionGuard`.
-- [ ] Auth store: Signals + RxJS para estado auth (user, roles, permissions, token).
-- [ ] Utilities, constantes, enums.
+- [x] Modelos TypeScript (DTOs) alineados a API.
+- [x] Servicios base: `ApiService`, `AuthService`, `HttpErrorHandler`.
+- [x] Interceptors: Auth (token), Error (401/403, traceId), CorrelationId, Loading global.
+- [x] Guards: `AuthGuard`, `RoleGuard`, `PermissionGuard`.
+- [x] Auth store: Signals + RxJS para estado auth (user, roles, permissions, token).
+- [x] Utilities, constantes, enums.
 
 3. **Layout y navegación**
-- [ ] Header, Sidebar, Footer, Breadcrumbs.
-- [ ] Menú dinámico según permisos/roles (sección 31).
-- [ ] Responsive (mobile).
+- [x] Header, Sidebar, Footer, Breadcrumbs.
+- [x] Menú dinámico según permisos/roles (sección 31).
+- [x] Responsive (mobile).
 
 4. **Componentes compartidos (Shared UI)**
-- [ ] DataTable, SearchBox, FilterPanel, Modal/Drawer, Form controls, DatePicker, Dropdown, StatusBadge, ConfirmDialog, Toast, Pagination, FileUploader, Timeline, DashboardCard, Chart (opcional).
-- [ ] Directivas/pipes reutilizables.
+- [x] DataTable, SearchBox, FilterPanel, Modal/Drawer, Form controls, DatePicker, Dropdown, StatusBadge, ConfirmDialog, Toast, Pagination, FileUploader, Timeline, DashboardCard, Chart (opcional).
+- [x] Directivas/pipes reutilizables.
 
 5. **Módulos funcionales (features)**
-- [ ] **Auth**: Login, Logout, Perfil (`/auth/login`, `/profile`).
-- [ ] **Dashboard**: KPIs, gráficos, alertas (vencimientos).
-- [ ] **Usuarios y Administración**: Users, Roles, Departments, Locations.
-- [ ] **Activos**: Assets list/detail/create/edit, AssetTypes, Asignaciones (historial), Estados.
-- [ ] **Software y Licencias**: Software, Licenses, alertas vencimiento.
-- [ ] **Proveedores y Contratos**: Vendors, Contracts, alertas.
-- [ ] **Help Desk**: Tickets (list, detail, create, assign, comments, transitions), Solicitudes, Categorías, SLA (vista).
-- [ ] **Mantenimientos**: Maintenance calendar/list.
-- [ ] **Cambios/Compras/Documentos**: CRUDs básicos.
-- [ ] **Reportes**: Filtros, vista previa, exportación (Excel/CSV/PDF).
-- [ ] **Auditoría**: Solo lectura con filtros.
-- [ ] **Configuración**: Parámetros del sistema (acceso restringido).
+- [x] **Auth**: Login, Logout, Perfil (`/auth/login`, `/profile`).
+- [x] **Dashboard**: KPIs, gráficos, alertas (vencimientos).
+- [x] **Usuarios y Administración**: Users, Roles, Departments, Locations.
+- [x] **Activos**: Assets list/detail/create/edit, AssetTypes, Asignaciones (historial), Estados.
+- [x] **Software y Licencias**: Software, Licenses, alertas vencimiento.
+- [x] **Proveedores y Contratos**: Vendors, Contracts, alertas.
+- [x] **Help Desk**: Tickets (list, detail, create, assign, comments, transitions), Solicitudes, Categorías, SLA (vista).
+- [x] **Mantenimientos**: Maintenance calendar/list.
+- [x] **Cambios/Compras/Documentos**: CRUDs básicos.
+- [x] **Reportes**: Filtros, vista previa, exportación (Excel/CSV/PDF).
+- [x] **Auditoría**: Solo lectura con filtros.
+- [x] **Configuración**: Parámetros del sistema (acceso restringido).
 
 6. **UX, Accesibilidad y Estados**
-- [ ] Loading states, empty states, errores.
-- [ ] Validación de formularios (Reactive Forms).
-- [ ] Toasts/Confirmaciones para acciones destructivas.
-- [ ] Accesibilidad básica (ARIA) y consistencia visual.
+- [x] Loading states, empty states, errores.
+- [x] Validación de formularios (Reactive Forms).
+- [x] Toasts/Confirmaciones para acciones destructivas.
+- [x] Accesibilidad básica (ARIA) y consistencia visual.
 
 7. **Comunicación API**
-- [ ] Servicios por feature (`AssetService`, `TicketService`, `UserService`, `LicenseService`, `VendorService`, `ReportService`, `AuditService`, `ConfigService`).
-- [ ] No URLs hardcodeadas en componentes (usar environment + servicios).
-- [ ] Paginación/filtros tipados.
+- [x] Servicios por feature (`AssetService`, `TicketService`, `UserService`, `LicenseService`, `VendorService`, `ReportService`, `AuditService`, `ConfigService`).
+- [x] No URLs hardcodeadas en componentes (usar environment + servicios).
+- [x] Paginación/filtros tipados.
 
 **Entregables:** SPA funcional con login, navegación por permisos, CRUDs principales y dashboard.
 **Dependencias:** Fase 2–8 (API endpoints disponibles).

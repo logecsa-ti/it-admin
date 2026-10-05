@@ -2,8 +2,9 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { PERMISSIONS as P } from '@core/auth/permissions.generated';
 import { SoftwareDto, VendorDto } from '@core/models';
 import { CatalogConfig, CatalogPageComponent } from '@shared/components/catalog-page/catalog-page.component';
-import { enumLabel, enumOptions } from '@shared/labels/enum-labels';
+import { enumLabel } from '@shared/labels/enum-labels';
 import { LookupService } from '@shared/services/lookup.service';
+import { vendorFields } from './licensing-forms';
 import { LicensingService } from './licensing.service';
 
 @Component({
@@ -71,21 +72,8 @@ export class VendorsPage {
       { key: 'rating', header: 'Calificacion', value: (v) => (v.rating != null ? `${v.rating} / 5` : '—'), sortKey: 'rating', width: '120px' },
       { key: 'status', header: 'Estado', value: (v) => enumLabel('VendorStatus', v.status), width: '110px' },
     ],
-    fields: [
-      { key: 'code', label: 'Codigo', maxLength: 30 },
-      { key: 'name', label: 'Razon social', required: true, maxLength: 200 },
-      { key: 'taxId', label: 'RUC / identificacion fiscal', maxLength: 50 },
-      { key: 'status', label: 'Estado', type: 'select', required: true, options: enumOptions('VendorStatus'), defaultValue: 'Active' },
-      { key: 'contactName', label: 'Persona de contacto', maxLength: 150 },
-      { key: 'email', label: 'Correo', type: 'email', maxLength: 200 },
-      { key: 'phone', label: 'Telefono', maxLength: 50 },
-      { key: 'website', label: 'Sitio web', type: 'url', maxLength: 300 },
-      { key: 'address', label: 'Direccion', maxLength: 300, wide: true },
-      { key: 'city', label: 'Ciudad', maxLength: 100 },
-      { key: 'country', label: 'Pais', maxLength: 100 },
-      { key: 'rating', label: 'Calificacion (1 a 5)', type: 'number', min: 1, max: 5 },
-      { key: 'notes', label: 'Notas', type: 'textarea', maxLength: 1000 },
-    ],
+    fields: vendorFields(),
+    rowLink: (v) => ['/proveedores', v.id],
     afterChange: () => this.lookups.invalidate('vendors'),
   };
 }

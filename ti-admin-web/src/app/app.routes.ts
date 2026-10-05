@@ -68,10 +68,12 @@ export const routes: Routes = [
       },
       {
         path: 'proveedores',
-        title: 'Proveedores · TI Admin',
         canActivate: [permissionGuard],
         data: { permissions: [P.VendorsView], breadcrumb: 'Proveedores' },
-        loadComponent: () => import('@features/licensing/licensing-catalog-pages').then((m) => m.VendorsPage),
+        children: [
+          { path: '', title: 'Proveedores · TI Admin', loadComponent: () => import('@features/licensing/licensing-catalog-pages').then((m) => m.VendorsPage) },
+          { path: ':id', title: 'Proveedor · TI Admin', data: { breadcrumb: 'Detalle' }, loadComponent: () => import('@features/licensing/vendor-detail/vendor-detail.component').then((m) => m.VendorDetailComponent) },
+        ],
       },
       {
         path: 'licencias',

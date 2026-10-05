@@ -53,3 +53,22 @@ export function contractFields(lookups: LookupService, editing: ContractDto | nu
     ...(editing ? [] : [{ key: 'activate', label: 'Activar al guardar', type: 'checkbox', defaultValue: true } as FieldDef]),
   ];
 }
+
+/** Campos del formulario de proveedores (alta y edicion). */
+export function vendorFields(): FieldDef[] {
+  return [
+    { key: 'code', label: 'Codigo', maxLength: 30 },
+    { key: 'name', label: 'Razon social', required: true, maxLength: 200 },
+    { key: 'taxId', label: 'RUC / identificacion fiscal', maxLength: 50 },
+    { key: 'status', label: 'Estado', type: 'select', required: true, options: enumOptions('VendorStatus'), defaultValue: 'Active' },
+    { key: 'contactName', label: 'Persona de contacto', maxLength: 150 },
+    { key: 'email', label: 'Correo', type: 'email', maxLength: 200 },
+    { key: 'phone', label: 'Telefono', maxLength: 50 },
+    { key: 'website', label: 'Sitio web', type: 'url', maxLength: 300 },
+    { key: 'address', label: 'Direccion', maxLength: 300, wide: true },
+    { key: 'city', label: 'Ciudad', maxLength: 100 },
+    { key: 'country', label: 'Pais', maxLength: 100 },
+    { key: 'rating', label: 'Calificacion (1 a 5)', type: 'number', min: 1, max: 5 },
+    { key: 'notes', label: 'Notas', type: 'textarea', maxLength: 1000 },
+  ];
+}

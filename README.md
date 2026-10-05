@@ -46,7 +46,7 @@ dotnet run --project TIAdmin.Api
 3. **Frontend**:
 ```powershell
 cd ti-admin-web
-npm install
+npm ci
 npm start
 ```
 
@@ -69,10 +69,10 @@ dotnet test .\TIAdmin.sln
 dotnet ef migrations add <Nombre> --project TIAdmin.Infrastructure --startup-project TIAdmin.Api
 dotnet ef database update --project TIAdmin.Infrastructure --startup-project TIAdmin.Api
 
-# Frontend
-npm run lint
+# Frontend (desde ti-admin-web; detalles en ti-admin-web/README.md)
+npm run lint:types
 npm run build
-npm test
+npx ng test --watch=false
 ```
 
 ## Contribución

@@ -1,5 +1,5 @@
-# CI del backend (Fase 11): compilacion con analizadores (advertencias = errores), pruebas unitarias,
-# funcionales e integracion con SQL Server real (Testcontainers) y revision de paquetes vulnerables.
+# CI (Fases 9 y 11). Backend: compilacion con analizadores (advertencias = errores), pruebas unitarias,
+# funcionales e integracion con SQL Server real (Testcontainers) y paquetes vulnerables. Frontend: tipos, Vitest y build.
 name: CI
 
 on:
@@ -69,3 +69,43 @@ jobs:
           name: test-results
           path: TestResults
           retention-days: 14
+
+  frontend:
+    name: Build y pruebas (Angular)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ti-admin-web
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: ti-admin-web/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Permisos sincronizados con Permissions.cs
+        run: |
+          npm run api:permissions
+          git diff --exit-code src/app/core/auth/permissions.generated.ts || {
+            echo "::error::permissions.generated.ts no coincide con Permissions.cs. Ejecute 'npm run api:permissions'."
+            exit 1
+          }
+
+      - name: Tipos (tsc estricto)
+        run: npm run lint:types
+
+      - name: Pruebas unitarias (Vitest)
+        run: npx ng test --watch=false
+
+      - name: Build de produccion
+        run: npm run build
+
+      - name: Dependencias vulnerables
+        run: npm audit --omit=dev --audit-level=high

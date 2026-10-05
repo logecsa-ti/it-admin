@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,6 +20,7 @@ import { DialogsService } from '@shared/services/dialogs.service';
 import { LookupService } from '@shared/services/lookup.service';
 import { pagedList } from '@shared/utils/paged-list';
 import { maintenanceFields } from '../operations-forms';
+import { MaintenanceCalendarComponent } from './maintenance-calendar.component';
 import { OperationsService } from '../operations.service';
 
 interface MaintenanceFilters extends QueryParams {
@@ -32,6 +34,7 @@ interface MaintenanceFilters extends QueryParams {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule,
+    MatButtonToggleModule,
     MatCheckboxModule,
     MatFormFieldModule,
     MatIconModule,
@@ -43,6 +46,7 @@ interface MaintenanceFilters extends QueryParams {
     StatusBadgeComponent,
     CanDirective,
     AppDatePipe,
+    MaintenanceCalendarComponent,
   ],
   template: `
     <div class="page">
@@ -67,7 +71,14 @@ interface MaintenanceFilters extends QueryParams {
             </mat-select>
           </mat-form-field>
           <mat-checkbox [checked]="!!list.filters().overdue" (change)="list.patchFilters({ overdue: $event.checked || null })">Vencidos</mat-checkbox>
+          <mat-button-toggle-group class="view-toggle" hideSingleSelectionIndicator [value]="view()" (change)="setView($event.value)" aria-label="Vista">
+            <mat-button-toggle value="list"><mat-icon>list</mat-icon> Lista</mat-button-toggle>
+            <mat-button-toggle value="calendar"><mat-icon>calendar_month</mat-icon> Calendario</mat-button-toggle>
+          </mat-button-toggle-group>
         </div>
+        @if (view() === 'calendar') {
+          <app-maintenance-calendar [filters]="calendarFilters()" (select)="open($event)" />
+        } @else {
         <app-data-table
           caption="Mantenimientos"
           [columns]="columns"
@@ -95,12 +106,14 @@ interface MaintenanceFilters extends QueryParams {
             @if (row.isOverdue) { <app-status-badge label="Vencido" tone="danger" /> }
           </ng-template>
         </app-data-table>
+        }
       </section>
     </div>
   `,
   styles: `
     .name-cell { display: flex; flex-direction: column; }
     .strong { font-weight: 500; }
+    .view-toggle { margin-left: auto; }
     .overdue { color: var(--app-tone-danger-fg); font-weight: 600; white-space: nowrap; }
   `,
 })
@@ -115,6 +128,10 @@ export class MaintenanceListComponent {
   protected readonly types = enumOptions('MaintenanceType');
   protected readonly statuses = enumOptions('MaintenanceStatus');
   protected readonly list = pagedList<MaintenanceDto, MaintenanceFilters>((page, f) => this.operations.maintenances.list(page, f), {});
+
+  protected readonly view = signal<'list' | 'calendar'>(readView());
+  /** El calendario comparte filtros y busqueda con la lista; el rango de fechas lo pone el calendario. */
+  protected readonly calendarFilters = computed(() => ({ ...this.list.filters(), search: this.list.search() || null }));
 
   protected readonly columns: TableColumn<MaintenanceDto>[] = [
     { key: 'number', header: 'Numero', sortKey: 'number', width: '150px' },
@@ -136,5 +153,24 @@ export class MaintenanceListComponent {
         this.toast.success(`Mantenimiento ${created.number} registrado.`);
         void this.router.navigate(['/mantenimientos', created.id]);
       });
+  }
+
+  setView(view: 'list' | 'calendar'): void {
+    this.view.set(view);
+    try {
+      localStorage.setItem(VIEW_KEY, view);
+    } catch {
+      // Preferencia opcional: sin almacenamiento se usa la lista.
+    }
+  }
+}
+
+const VIEW_KEY = 'tiadmin.maintenance.view';
+
+function readView(): 'list' | 'calendar' {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'calendar' ? 'calendar' : 'list';
+  } catch {
+    return 'list';
   }
 }
