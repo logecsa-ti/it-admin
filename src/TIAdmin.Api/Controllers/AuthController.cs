@@ -63,33 +63,31 @@ public sealed class AuthController : ControllerBase
                 validation.Errors.Select(e => new ApiError("VALIDATION_ERROR", e.ErrorMessage))));
         }
 
-        var result = await signInManager.PasswordSignInAsync(
-            request.UserName,
-            request.Password,
-            isPersistent: false,
-            lockoutOnFailure: true);
-
-        if (result.IsLockedOut)
-        {
-            return ApiResponse<LoginResponse>.Fail("La cuenta esta bloqueada temporalmente.", [
-                new ApiError("ACCOUNT_LOCKED", "La cuenta esta bloqueada temporalmente.")
-            ]);
-        }
-
-        if (!result.Succeeded)
-        {
-            // Mensaje generico: no revela si el usuario existe o la contrasena es incorrecta.
-            return Unauthorized(ApiResponse<LoginResponse>.Fail("Usuario o contrasena incorrectos.", [
-                new ApiError("INVALID_CREDENTIALS", "Usuario o contrasena incorrectos.")
-            ]));
-        }
+        // Mensaje generico: no revela si el usuario existe o la contrasena es incorrecta.
+        var invalidCredentials = ApiResponse<LoginResponse>.Fail("Usuario o contrasena incorrectos.", [
+            new ApiError("INVALID_CREDENTIALS", "Usuario o contrasena incorrectos.")
+        ]);
 
         var user = await userManager.FindByNameAsync(request.UserName);
         if (user is null || !user.IsActive)
         {
-            return Unauthorized(ApiResponse<LoginResponse>.Fail("Usuario o contrasena incorrectos.", [
-                new ApiError("INVALID_CREDENTIALS", "Usuario o contrasena incorrectos.")
+            return Unauthorized(invalidCredentials);
+        }
+
+        // CheckPasswordSignInAsync aplica lockout sin emitir la cookie de Identity:
+        // la API es stateless y solo autentica con JWT.
+        var result = await signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
+
+        if (result.IsLockedOut)
+        {
+            return Unauthorized(ApiResponse<LoginResponse>.Fail("La cuenta esta bloqueada temporalmente.", [
+                new ApiError("ACCOUNT_LOCKED", "La cuenta esta bloqueada temporalmente.")
             ]));
+        }
+
+        if (!result.Succeeded)
+        {
+            return Unauthorized(invalidCredentials);
         }
 
         var authenticated = new AuthenticatedUser(

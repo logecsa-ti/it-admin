@@ -45,6 +45,15 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser,
 
         foreach (var entry in context.ChangeTracker.Entries())
         {
+            // SPECS.md seccion 37: un Remove() sobre una entidad con historico se convierte en soft delete.
+            if (entry is { State: EntityState.Deleted, Entity: ISoftDeletable softDeletable })
+            {
+                entry.State = EntityState.Modified;
+                softDeletable.IsDeleted = true;
+                softDeletable.DeletedAt = now;
+                softDeletable.DeletedBy = userId;
+            }
+
             if (entry.State is not (EntityState.Added or EntityState.Modified))
             {
                 continue;

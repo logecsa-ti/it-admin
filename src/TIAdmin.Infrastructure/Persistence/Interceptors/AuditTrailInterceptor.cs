@@ -29,6 +29,12 @@ public sealed class AuditTrailInterceptor(
         "NormalizedEmail", "NormalizedUserName", "LicenseKey"
     };
 
+    /// <summary>
+    /// Altas pendientes de auditar. Su Id (identity) solo existe despues del INSERT,
+    /// por eso se registran en SavedChanges y no en SavingChanges.
+    /// </summary>
+    private readonly List<EntityEntry> pendingCreates = [];
+
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
         InterceptionResult<int> result,
@@ -58,6 +64,70 @@ public sealed class AuditTrailInterceptor(
         return base.SavingChanges(eventData, result);
     }
 
+    public override async ValueTask<int> SavedChangesAsync(
+        SaveChangesCompletedEventData eventData,
+        int result,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(eventData);
+
+        if (eventData.Context is DbContext context && AddPendingCreateLogs(context))
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
+        return await base.SavedChangesAsync(eventData, result, cancellationToken);
+    }
+
+    public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
+    {
+        ArgumentNullException.ThrowIfNull(eventData);
+
+        if (eventData.Context is DbContext context && AddPendingCreateLogs(context))
+        {
+            context.SaveChanges();
+        }
+
+        return base.SavedChanges(eventData, result);
+    }
+
+    public override void SaveChangesFailed(DbContextErrorEventData eventData)
+    {
+        pendingCreates.Clear();
+        base.SaveChangesFailed(eventData);
+    }
+
+    public override Task SaveChangesFailedAsync(DbContextErrorEventData eventData, CancellationToken cancellationToken = default)
+    {
+        pendingCreates.Clear();
+        return base.SaveChangesFailedAsync(eventData, cancellationToken);
+    }
+
+    /// <summary>
+    /// Agrega los AuditLog de las altas ya persistidas. Devuelve true si hay que guardar de nuevo.
+    /// El segundo SaveChanges solo contiene AuditLog, que no se audita, asi que no hay recursion.
+    /// </summary>
+    private bool AddPendingCreateLogs(DbContext context)
+    {
+        if (pendingCreates.Count == 0)
+        {
+            return false;
+        }
+
+        var entries = pendingCreates
+            .Select(entry =>
+            {
+                var entityName = entry.Metadata.ClrType.Name;
+                return (AuditAction.Create, ResolveModule(entityName), entityName,
+                    GetEntityId(entry), (string?)null, Serialize(Snapshot(entry, useOriginal: false)));
+            })
+            .ToList();
+
+        pendingCreates.Clear();
+        AddAuditLogs(context, entries);
+        return true;
+    }
+
     private void WriteAuditLogs(DbContext context)
     {
         var entries = new List<(AuditAction Action, string Module, string EntityName, string EntityId, string? Old, string? New)>();
@@ -75,8 +145,13 @@ public sealed class AuditTrailInterceptor(
             switch (entry.State)
             {
                 case EntityState.Added:
-                    entries.Add((AuditAction.Create, ResolveModule(entityName), entityName,
-                        GetEntityId(entry), null, Serialize(Snapshot(entry, useOriginal: false))));
+                    pendingCreates.Add(entry);
+                    break;
+
+                // AuditSaveChangesInterceptor ya convirtio el Remove() en soft delete (Modified).
+                case EntityState.Modified when IsSoftDeletion(entry):
+                    entries.Add((AuditAction.Delete, ResolveModule(entityName), entityName,
+                        GetEntityId(entry), Serialize(Snapshot(entry, useOriginal: true)), null));
                     break;
 
                 case EntityState.Modified:
@@ -93,6 +168,13 @@ public sealed class AuditTrailInterceptor(
             }
         }
 
+        AddAuditLogs(context, entries);
+    }
+
+    private void AddAuditLogs(
+        DbContext context,
+        List<(AuditAction Action, string Module, string EntityName, string EntityId, string? Old, string? New)> entries)
+    {
         if (entries.Count == 0)
         {
             return;
@@ -128,6 +210,17 @@ public sealed class AuditTrailInterceptor(
     private static bool ShouldAudit(EntityEntry entry) =>
         typeof(IAuditableEntity).IsAssignableFrom(entry.Entity.GetType())
         || typeof(ISoftDeletable).IsAssignableFrom(entry.Entity.GetType());
+
+    private static bool IsSoftDeletion(EntityEntry entry)
+    {
+        if (entry.Entity is not ISoftDeletable)
+        {
+            return false;
+        }
+
+        var isDeleted = entry.Property(nameof(ISoftDeletable.IsDeleted));
+        return isDeleted.CurrentValue is true && isDeleted.OriginalValue is false;
+    }
 
     /// <summary>
     /// Proyecta solo las propiedades escalares relevantes, evitando datos sensibles

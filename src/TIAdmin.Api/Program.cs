@@ -79,7 +79,16 @@ var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<Jw
     ?? throw new InvalidOperationException(
         "Falta la seccion 'Jwt' en la configuracion. Ver docs/DEV_MEMORY.md.");
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+// AddIdentity registra la cookie de Identity como DefaultAuthenticate/DefaultChallenge;
+// esos valores tienen prioridad sobre DefaultScheme, asi que se fijan todos a JWT.
+// Sin esto el token nunca se valida y los 401 redirigen a /Account/Login.
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
