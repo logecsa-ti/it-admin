@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TIAdmin.Application.Common.Models;
 using TIAdmin.Application.Licensing;
+using TIAdmin.Application.Operations;
 using TIAdmin.Application.Validators;
 using TIAdmin.Application.Vendors;
 using TIAdmin.Domain.Enums;
@@ -168,7 +169,7 @@ public sealed class LicensesController(ILicenseService licenses) : ControllerBas
 [Route("api/v1/alerts")]
 [Authorize]
 [Produces("application/json")]
-public sealed class AlertsController(ILicenseService licenses, IContractService contracts) : ControllerBase
+public sealed class AlertsController(ILicenseService licenses, IContractService contracts, IMaintenanceService maintenances) : ControllerBase
 {
     [HttpGet("licenses")]
     [Authorize(Policy = Perms.LicensesView)]
@@ -179,4 +180,10 @@ public sealed class AlertsController(ILicenseService licenses, IContractService 
     [Authorize(Policy = Perms.ContractsView)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<ContractAlertDto>>>> Contracts(CancellationToken cancellationToken) =>
         Ok(ApiResponse<IReadOnlyList<ContractAlertDto>>.Ok(await contracts.GetAlertsAsync(cancellationToken)));
+
+    /// <summary>Mantenimientos proximos (Alerts.Maintenance.Days), vencidos y preventivos por realizar.</summary>
+    [HttpGet("maintenance")]
+    [Authorize(Policy = Perms.MaintenanceView)]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<MaintenanceAlertDto>>>> Maintenance(CancellationToken cancellationToken) =>
+        Ok(ApiResponse<IReadOnlyList<MaintenanceAlertDto>>.Ok(await maintenances.GetAlertsAsync(cancellationToken)));
 }

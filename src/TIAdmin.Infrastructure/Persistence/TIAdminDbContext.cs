@@ -57,6 +57,14 @@ public class TIAdminDbContext : IdentityDbContext<ApplicationUser, ApplicationRo
 
     public DbSet<Domain.Entities.TicketStatusHistory> TicketStatusHistory => Set<Domain.Entities.TicketStatusHistory>();
 
+    public DbSet<Domain.Entities.Maintenance> Maintenances => Set<Domain.Entities.Maintenance>();
+
+    public DbSet<Domain.Entities.ChangeRequest> ChangeRequests => Set<Domain.Entities.ChangeRequest>();
+
+    public DbSet<Domain.Entities.PurchaseRequest> PurchaseRequests => Set<Domain.Entities.PurchaseRequest>();
+
+    public DbSet<Domain.Entities.PurchaseItem> PurchaseItems => Set<Domain.Entities.PurchaseItem>();
+
     public DbSet<ApplicationPermission> Permissions => Set<ApplicationPermission>();
 
     public DbSet<ApplicationRolePermission> RolePermissions => Set<ApplicationRolePermission>();

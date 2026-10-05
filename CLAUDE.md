@@ -45,6 +45,11 @@ ARCHITECTURE.md describes MediatR vertical slices (`Application/Features/<Module
 
 Workflows that span several entities use an Application service instead (first case: `Application/Assets/AssetService.cs`, registered in `Application/DependencyInjection.cs` via `AddApplication()`). Business rules live in the domain entity: `Asset.Status`/`CurrentUserId` have private setters and change only through `AssignTo`/`Return`/`ChangeStatus`, with the allowed transitions in `AssetStatusRules`. The service validates references, appends `AssetMovement` rows (an immutable log with user and correlation id) and saves. Assignment history is never rewritten: returning an asset closes the active `AssetAssignment` and the next assignment creates a new row. A filtered unique index guarantees one active assignment per asset, and `UnitOfWork.SaveChangesAsync` turns unique-index violations (SQL 2601/2627) into a 409 `ConflictException`. Application gets user names through the `IUserDirectory` port.
 
+Shared Application helpers for workflows:
+- `DocumentNumbers` assigns `PREFIX-YYYY-{Id:000000}` after insert (tickets, maintenances, changes, purchases), with prefixes in `SystemConfigurations`.
+- `AssetMovementLog` appends asset movement rows; use it whenever a workflow changes an asset.
+- Approval workflows (changes, purchases) enforce segregation of duties in the domain: the requester can't approve or reject their own request.
+
 When authorization depends on the data rather than only on the route, the controller requires just a login (`[Authorize]`) and the service decides. Help desk (`Application/HelpDesk/TicketService.cs`) is the reference case:
 - `TICKETS.VIEW`/`REQUESTS.VIEW` mean "see all incidents/service requests". A requester always sees their own tickets but never internal comments, and someone else's ticket returns 404, not 403.
 - The required create permission depends on the category's type.

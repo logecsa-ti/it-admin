@@ -258,6 +258,9 @@ public sealed class DatabaseSeeder(
             ("Alerts.License.Days", "90,30,14,7", "Alerts", ConfigurationDataType.String, true, "Dias de anticipacion para alertas de licencias"),
             ("Alerts.License.LowUtilizationPercent", "20", "Alerts", ConfigurationDataType.Int, true, "Porcentaje de uso por debajo del cual una licencia se considera subutilizada"),
             ("Tickets.NumberPrefix", "TKT", "Tickets", ConfigurationDataType.String, true, "Prefijo del numero de ticket (PREFIJO-AAAA-000001)"),
+            ("Maintenance.NumberPrefix", "MNT", "Maintenance", ConfigurationDataType.String, true, "Prefijo del numero de mantenimiento"),
+            ("Changes.NumberPrefix", "CHG", "Changes", ConfigurationDataType.String, true, "Prefijo del numero de cambio"),
+            ("Purchases.NumberPrefix", "PUR", "Purchases", ConfigurationDataType.String, true, "Prefijo del numero de solicitud de compra"),
             ("Alerts.Maintenance.Days", "7", "Alerts", ConfigurationDataType.Int, true, "Dias de anticipacion para alertas de mantenimiento")
         };
 

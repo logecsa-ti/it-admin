@@ -305,6 +305,9 @@ public sealed class AuditTrailInterceptor(
         var n when n.Contains("Asset", StringComparison.OrdinalIgnoreCase) => "Assets",
         var n when n.Contains("Ticket", StringComparison.OrdinalIgnoreCase) => "Tickets",
         var n when n.Contains("Sla", StringComparison.Ordinal) => "Tickets",
+        // ChangeRequest y PurchaseRequest antes que "Request" (solicitudes de servicio).
+        var n when n.Contains("Change", StringComparison.OrdinalIgnoreCase) => "Changes",
+        var n when n.Contains("Purchase", StringComparison.OrdinalIgnoreCase) => "Purchases",
         var n when n.Contains("Request", StringComparison.OrdinalIgnoreCase) => "Requests",
         // "License" antes que "Software": SoftwareLicense pertenece al modulo de licencias.
         var n when n.Contains("License", StringComparison.OrdinalIgnoreCase) => "Licenses",
@@ -313,8 +316,6 @@ public sealed class AuditTrailInterceptor(
         var n when n.Contains("Vendor", StringComparison.OrdinalIgnoreCase) => "Vendors",
         var n when n.Contains("Contract", StringComparison.OrdinalIgnoreCase) => "Contracts",
         var n when n.Contains("Maintenance", StringComparison.OrdinalIgnoreCase) => "Maintenance",
-        var n when n.Contains("Change", StringComparison.OrdinalIgnoreCase) => "Changes",
-        var n when n.Contains("Purchase", StringComparison.OrdinalIgnoreCase) => "Purchases",
         var n when n.Contains("Department", StringComparison.OrdinalIgnoreCase) => "Organization",
         var n when n.Contains("Location", StringComparison.OrdinalIgnoreCase) => "Organization",
         var n when n.Contains("Configuration", StringComparison.OrdinalIgnoreCase) => "Configuration",

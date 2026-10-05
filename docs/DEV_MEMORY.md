@@ -5,7 +5,7 @@
 **Fecha de inicio:** 2026-10-02
 **Última actualización:** 2026-10-05
 **Estado general:** En progreso
-**Fase actual:** Fase 7 - Mantenimientos/Cambios/Compras (Fase 6 completada)
+**Fase actual:** Fase 8 - Auditoría/Reportes/Dashboard/Configuración (Fase 7 completada)
 
 ---
 
@@ -45,10 +45,10 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 
 | Métrica | Valor |
 |---|---|
-| Fase actual | **Fase 7 - Mantenimientos/Cambios/Compras** |
-| Fases completadas | 7 / 12 (Fase 0-6) |
-| Tareas completadas (Fase 6) | 5 / 5 |
-| Tests | 183 / 183 (107 unit + 76 functional) |
+| Fase actual | **Fase 8 - Auditoría/Reportes/Dashboard/Configuración** |
+| Fases completadas | 8 / 12 (Fase 0-7) |
+| Tareas completadas (Fase 7) | 4 / 4 |
+| Tests | 202 / 202 (119 unit + 83 functional) |
 | Estado | En progreso |
 
 ### Progreso global
@@ -62,7 +62,7 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 4 - Activos y Asignaciones | ✅ Completada |
 | 5 - Software/Licencias/Proveedores/Contratos | ✅ Completada |
 | 6 - Help Desk/Solicitudes/SLA | ✅ Completada |
-| 7 - Mantenimientos/Cambios/Compras | ⬜ Pendiente |
+| 7 - Mantenimientos/Cambios/Compras | ✅ Completada |
 | 8 - Auditoría/Reportes/Dashboard/Config | ⬜ Pendiente |
 | 9 - Frontend Angular | ⬜ Pendiente |
 | 10 - Integraciones/Notificaciones/Archivos/Caché | ⬜ Pendiente |
@@ -139,6 +139,10 @@ Recomendación: agregar `C:\Program Files\dotnet` al PATH del sistema para futur
 | 2026-10-05 | Fase 6 | `TicketService`, `HelpDeskConfigService`; endpoints `/tickets` (+status, assign, approve, reject, comments, history), `/ticket-categories`, `/sla-policies`; `IClock.TimeZone`; `ISystemSettings.GetStringAsync`; seed de categorías, SLA y `Tickets.NumberPrefix` | `Application/HelpDesk/**`, `Api/Controllers/TicketsController.cs` | ADR-026, ADR-028, ADR-029 |
 | 2026-10-05 | Fase 6 | Migración `AddHelpDesk` aplicada (5 tablas, 3 CHECK, índice único filtrado de SLA predeterminado, rowversion en tickets) + datos: USER pierde TICKETS.VIEW y REQUESTS.VIEW | `Migrations/**` | Verificado en SQL Server |
 | 2026-10-05 | Fase 6 | +32 tests (24 unidad: horario laboral, selección de SLA, flujo de tickets; 8 funcionales). Verificado en SQL Server: numeración, alcance por usuario, filtro de vencidos, vencimientos correctos en hora de Managua | `Tests/**` | 183/183 |
+| 2026-10-05 | Fase 7 | Dominio: `Maintenance`, `ChangeRequest`, `PurchaseRequest` + `PurchaseItem` (transiciones, segregación de funciones, totales). `DocumentNumbers` (numeración compartida con tickets) y `AssetMovementLog` (bitácora de movimientos compartida con `AssetService`) | `Domain/Entities/OperationsEntities.cs`, `Application/Common/**` | ADR-030, ADR-031 |
+| 2026-10-05 | Fase 7 | `MaintenanceService`, `ChangeService`, `PurchaseService`; endpoints `/maintenances`, `/changes`, `/purchases`, `/alerts/maintenance`; prefijos `Maintenance/Changes/Purchases.NumberPrefix` (seed); rowversion en las tres entidades (aprobaciones concurrentes) | `Application/Operations/**`, `Api/Controllers/OperationsControllers.cs` | — |
+| 2026-10-05 | Fase 7 | **Corrección**: módulo de auditoría de `ChangeRequest`/`PurchaseRequest` caía en "Requests" (se evaluaba "Request" antes que "Change"/"Purchase") | `AuditTrailInterceptor.cs` | — |
+| 2026-10-05 | Fase 7 | Migración `AddMaintenanceChangesPurchases` aplicada (4 tablas, 5 CHECK). +19 tests (12 dominio + 7 funcionales). Verificado en SQL Server: ciclo de mantenimiento con estado del activo, alerta preventiva, totales de compra, cambio estándar preaprobado | `Migrations/**`, `Tests/**` | 202/202 |
 | 2026-10-05 | Fase 5 | +34 tests (22 dominio + 12 funcionales). Verificado en SQL Server: filtros de estado efectivo, alertas, clave cifrada (`CfDJ8…`) sin fugas en auditoría, CHECK `UsedQuantity <= Quantity`, carrera sobre el último puesto | `Tests/**` | 151/151 |
 | 2026-10-05 | Fase 3 | **Verificado contra SQL Server**: login, 401 JSON sin token, CRUD departamentos (padre inexistente 400, ciclo 400, borrar con hijos 409, paginación/orden, soft delete + AuditLog Delete, código reservado 400), `GET /locations` paginado | — | Smoke test manual con curl |
 
@@ -241,7 +245,17 @@ Pendientes / decisiones abiertas:
 - Notificaciones (ticket creado/asignado/vencido) y adjuntos → Fase 10
 
 ### Fase 7 - Mantenimientos/Cambios/Compras
-**Estado:** Pending
+**Estado:** ✅ Completada | **Tareas:** 4/4
+
+- [x] 7.1 Mantenimientos (`/maintenances`): Planned → Scheduled → InProgress → Completed/Cancelled; vinculados a activo, técnico (requiere MAINTENANCE.MANAGE), proveedor, ticket y contrato; el activo disponible pasa a Maintenance al iniciar y vuelve a Available al terminar (con movimiento registrado); alertas `/alerts/maintenance` (próximos, vencidos, preventivos por `NextDueDate`)
+- [x] 7.2 Cambios (`/changes`): flujo completo de SPECS §27; plan de rollback obligatorio salvo cambios estándar (preaprobados); sin autoaprobación; implementa el responsable asignado o CHANGES.MANAGE; cada transición queda en AuditLog
+- [x] 7.3 Compras (`/purchases`): partidas con totales calculados, borrador editable, sin autoaprobación, ordenar exige proveedor, PURCHASES.MANAGE ordena/recibe
+- [x] 7.4 Contratos (refuerzo): mantenimientos vinculados a contrato con validación de proveedor; alertas periódicas por scheduler → Fase 10
+
+Pendientes / decisiones abiertas:
+- Recibir una compra no crea activos automáticamente (las partidas tienen `AssetTypeId` para hacerlo en el futuro)
+- Completar un preventivo no crea el siguiente automáticamente: `NextDueDate` alimenta la alerta `PreventiveDue`
+- TI_MANAGER revisa y administra cambios pero no puede crearlos (no tiene CHANGES.CREATE en la matriz); confirmar si es intencional
 
 ### Fase 8 - Auditoría/Reportes/Dashboard/Configuración
 **Estado:** Pending
@@ -282,6 +296,8 @@ Pendientes / decisiones abiertas:
 | ADR-016 | 2026-10-05 | Los usuarios no se eliminan: se desactivan (`USERS.DISABLE`) y se revocan sus refresh tokens. Asignar roles/permisos exige `ROLES.MANAGE` | Conserva historial (asignaciones, tickets, auditoría); asignar roles es escalar privilegios | Propuesto |
 | ADR-018 | 2026-10-05 | Reglas de estado del activo en la entidad de dominio (`Asset.AssignTo/Return/ChangeStatus`, setters privados); orquestación en un servicio de Application (`AssetService`) | Clean Architecture (CONVENTIONS §1.3): reglas testeables sin BD; los controllers quedan delgados. Patrón para flujos con varias entidades | Propuesto |
 | ADR-019 | 2026-10-05 | Convención EF `UtcDateTimeConverter` para todo `DateTime`: se lee con `Kind=Utc` | ADR-005; JSON con `Z` para que el frontend convierta a la zona configurada | Propuesto |
+| ADR-030 | 2026-10-05 | Segregación de funciones: quien solicita un cambio o una compra no puede aprobarlo ni rechazarlo (también con permisos de revisión). Cambios estándar quedan preaprobados al enviarse (ITIL) | Control interno; evita autoaprobación | Propuesto |
+| ADR-031 | 2026-10-05 | Mantenimiento ↔ estado del activo: iniciar sobre un activo Available lo pasa a Maintenance; completar/cancelar lo devuelve a Available si no hay otro en curso; un activo asignado conserva su estado. Ambos cambios se registran en `AssetMovements` | "Activos en mantenimiento" consistente sin edición manual; preventivo en sitio no desasigna | Propuesto |
 | ADR-026 | 2026-10-05 | Visibilidad de tickets: TICKETS.VIEW / REQUESTS.VIEW = ver todos los incidentes / solicitudes; el solicitante siempre ve los suyos (sin comentarios internos); un ticket ajeno responde 404. El rol USER pierde ambos permisos (migración en `AddHelpDesk`) | Mismo principio que Q-10 (privacidad del usuario final) sin agregar permisos al catálogo | Propuesto |
 | ADR-027 | 2026-10-05 | SLA: política más específica gana; vencimientos en horario laboral calculados en el dominio (`BusinessHours`) en `App:TimeZone`; en solicitudes con aprobación el reloj arranca al aprobar; el estado del SLA se calcula en cada consulta y `IsSlaBreached` se fija al resolver | Configurable sin código (SPECS §22); sin job para marcar vencidos | Propuesto |
 | ADR-028 | 2026-10-05 | Número de ticket `PREFIJO-AAAA-{Id:000000}` asignado tras insertar (prefijo en `Tickets.NumberPrefix`) | Único y sin carreras sin depender de secuencias de SQL Server (los tests usan InMemory); no reinicia por año | Propuesto |
@@ -355,7 +371,7 @@ git log --oneline -5
 
 ## 8. Próximos Pasos
 
-1. **Fase 7**: Mantenimientos (preventivo/correctivo/emergencia, vinculados a activo/ticket/proveedor), Gestión de cambios (flujo con aprobación y plan de rollback), Compras TI
+1. **Fase 8**: Auditoría (`/audit` solo lectura con filtros), Reportes (inventario, tickets, SLA, licencias, contratos, costos), Dashboard (`/dashboard/summary` con KPIs de SPECS §28) y Configuración (`/configuration` sobre `SystemConfigurations`, valores cifrados)
 2. Tests de integración con Testcontainers (SQL Server real)
 3. Actualizar esta memoria tras cada cambio significativo
 

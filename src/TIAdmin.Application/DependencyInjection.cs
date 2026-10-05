@@ -1,9 +1,11 @@
 namespace TIAdmin.Application;
 
 using Microsoft.Extensions.DependencyInjection;
+using TIAdmin.Application.Common;
 using TIAdmin.Application.Assets;
 using TIAdmin.Application.HelpDesk;
 using TIAdmin.Application.Licensing;
+using TIAdmin.Application.Operations;
 using TIAdmin.Application.Vendors;
 
 public static class DependencyInjection
@@ -13,6 +15,7 @@ public static class DependencyInjection
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.AddScoped<AssetMovementLog>();
         services.AddScoped<IAssetService, AssetService>();
         services.AddScoped<IVendorService, VendorService>();
         services.AddScoped<IContractService, ContractService>();
@@ -20,6 +23,9 @@ public static class DependencyInjection
         services.AddScoped<ILicenseService, LicenseService>();
         services.AddScoped<ITicketService, TicketService>();
         services.AddScoped<IHelpDeskConfigService, HelpDeskConfigService>();
+        services.AddScoped<IMaintenanceService, MaintenanceService>();
+        services.AddScoped<IChangeService, ChangeService>();
+        services.AddScoped<IPurchaseService, PurchaseService>();
 
         return services;
     }

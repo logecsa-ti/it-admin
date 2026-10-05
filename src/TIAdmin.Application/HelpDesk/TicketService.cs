@@ -1,5 +1,6 @@
 namespace TIAdmin.Application.HelpDesk;
 
+using TIAdmin.Application.Common;
 using TIAdmin.Application.Common.Constants;
 using TIAdmin.Application.Common.Interfaces;
 using TIAdmin.Application.Common.Models;
@@ -94,7 +95,7 @@ public sealed class TicketService(
         var ticket = new Ticket
         {
             // Numero provisional unico; el definitivo se deriva del Id tras insertar.
-            TicketNumber = $"TMP-{Guid.NewGuid():N}"[..20],
+            TicketNumber = DocumentNumbers.Provisional(),
             Type = category.Type,
             Title = request.Title.Trim(),
             Description = request.Description.Trim(),
@@ -129,10 +130,7 @@ public sealed class TicketService(
         }, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var prefix = await settings.GetStringAsync(NumberPrefixKey, "TKT", cancellationToken);
-        prefix = prefix.Length > 6 ? prefix[..6] : prefix; // PREFIJO-AAAA-000001 debe caber en 20 caracteres.
-        var year = TimeZoneInfo.ConvertTimeFromUtc(now, clock.TimeZone).Year;
-        ticket.TicketNumber = $"{prefix}-{year}-{ticket.Id:D6}";
+        ticket.TicketNumber = await DocumentNumbers.FormatAsync(settings, clock, NumberPrefixKey, "TKT", ticket.Id, now, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return await GetAsync(ticket.Id, cancellationToken);

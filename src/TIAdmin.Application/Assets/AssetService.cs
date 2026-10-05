@@ -1,5 +1,6 @@
 namespace TIAdmin.Application.Assets;
 
+using TIAdmin.Application.Common;
 using TIAdmin.Application.Common.Interfaces;
 using TIAdmin.Application.Common.Models;
 using TIAdmin.Domain.Entities;
@@ -41,7 +42,7 @@ public sealed class AssetService(
     IUnitOfWork unitOfWork,
     IUserDirectory userDirectory,
     ICurrentUserService currentUser,
-    IAuditContext auditContext,
+    AssetMovementLog movementLog,
     IClock clock)
     : IAssetService
 {
@@ -293,20 +294,7 @@ public sealed class AssetService(
         CancellationToken cancellationToken,
         int? fromLocationId = null,
         int? toLocationId = null) =>
-        await unitOfWork.AssetMovements.AddAsync(new AssetMovement
-        {
-            AssetId = asset.Id,
-            MovementType = type,
-            FromValue = Truncate(from),
-            ToValue = Truncate(to),
-            FromLocationId = fromLocationId,
-            ToLocationId = toLocationId,
-            UserId = currentUser.UserId,
-            UserName = currentUser.UserName,
-            Notes = notes,
-            Timestamp = clock.UtcNow,
-            CorrelationId = auditContext.CorrelationId
-        }, cancellationToken);
+        await movementLog.AddAsync(asset, type, from, to, notes, cancellationToken, fromLocationId, toLocationId);
 
     private async Task<string?> LocationNameAsync(int? id, CancellationToken cancellationToken) =>
         id is { } value ? (await unitOfWork.Locations.GetByIdAsync(value, cancellationToken))?.Name : null;
@@ -315,6 +303,4 @@ public sealed class AssetService(
         id is { } value ? (await unitOfWork.Departments.GetByIdAsync(value, cancellationToken))?.Name : null;
 
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private static string? Truncate(string? value) => value is { Length: > 300 } ? value[..300] : value;
 }

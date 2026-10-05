@@ -26,6 +26,9 @@ public sealed class UnitOfWork : IUnitOfWork
     private ITicketCategoryRepository? ticketCategories;
     private ISlaPolicyRepository? slaPolicies;
     private ITicketRepository? tickets;
+    private IMaintenanceRepository? maintenances;
+    private IChangeRequestRepository? changeRequests;
+    private IPurchaseRequestRepository? purchaseRequests;
 
     public UnitOfWork(TIAdminDbContext context)
     {
@@ -59,6 +62,12 @@ public sealed class UnitOfWork : IUnitOfWork
     public ISlaPolicyRepository SlaPolicies => slaPolicies ??= new SlaPolicyRepository(context);
 
     public ITicketRepository Tickets => tickets ??= new TicketRepository(context);
+
+    public IMaintenanceRepository Maintenances => maintenances ??= new MaintenanceRepository(context);
+
+    public IChangeRequestRepository ChangeRequests => changeRequests ??= new ChangeRequestRepository(context);
+
+    public IPurchaseRequestRepository PurchaseRequests => purchaseRequests ??= new PurchaseRequestRepository(context);
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
