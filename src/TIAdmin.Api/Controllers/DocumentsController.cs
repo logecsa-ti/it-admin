@@ -30,7 +30,7 @@ public sealed class DocumentsController(IDocumentService documents) : Controller
     [RequestSizeLimit(30 * 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = 30 * 1024 * 1024)]
     public async Task<ActionResult<ApiResponse<DocumentDto>>> Upload(
-        [FromForm] IFormFile? file,
+        IFormFile? file,
         [FromForm] string entityName,
         [FromForm] int entityId,
         [FromForm] string? description,

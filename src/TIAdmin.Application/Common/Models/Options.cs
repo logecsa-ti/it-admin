@@ -64,6 +64,9 @@ public sealed class RateLimitOptions
     public int LoginPermitLimit { get; set; } = 5;
 
     public int LoginWindowMinutes { get; set; } = 1;
+
+    /// <summary>Renovacion de sesion: el refresh token es aleatorio de 256 bits (sin riesgo de fuerza bruta); recargas y pestanas renuevan.</summary>
+    public int RefreshPermitLimit { get; set; } = 30;
 }
 
 public sealed class StorageOptions

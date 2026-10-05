@@ -119,7 +119,7 @@ public sealed class AuthController : ControllerBase
     /// </summary>
     [HttpPost("refresh")]
     [AllowAnonymous]
-    [EnableRateLimiting("login")]
+    [EnableRateLimiting("refresh")]
     [ValidatableRequest]
     public async Task<ActionResult<ApiResponse<LoginResponse>>> Refresh(
         [FromBody] RefreshTokenRequest request,

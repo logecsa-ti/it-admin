@@ -1,0 +1,48 @@
+// Tokens de diseño propios (layout y estados). Los colores de Material vienen de --mat-sys-*.
+$font-family: 'Segoe UI', 'Segoe UI Variable', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+$breakpoint-mobile: 960px;
+
+:root {
+  // Oliva corporativo (tonos del palette primario).
+  --app-olive-900: #161e00;
+  --app-olive-800: #293500;
+  --app-olive-700: #3e4c0d;
+  --app-olive-600: #495819;
+  --app-olive-500: #556424;
+  --app-olive-100: #eef3dc;
+  --app-olive-50: #f6f8ee;
+
+  // Estructura
+  --app-header-height: 56px;
+  --app-sidebar-width: 256px;
+  --app-header-bg: var(--app-olive-700);
+  --app-header-fg: #ffffff;
+  --app-sidebar-bg: #ffffff;
+  --app-page-bg: #f5f6f2;
+  --app-surface: #ffffff;
+  --app-border: #dcded5;
+  --app-border-soft: #ebece6;
+
+  // Texto
+  --app-text: #1d2014;
+  --app-text-muted: #5d6152;
+  --app-text-subtle: #8a8d80;
+
+  // Estados (badges, alertas): tonos apagados, legibles sobre blanco.
+  --app-tone-neutral-bg: #eeefe9;
+  --app-tone-neutral-fg: #4a4d42;
+  --app-tone-info-bg: #e7eef3;
+  --app-tone-info-fg: #2f5470;
+  --app-tone-success-bg: #e8f0dc;
+  --app-tone-success-fg: #3c5a1a;
+  --app-tone-warning-bg: #f7efd9;
+  --app-tone-warning-fg: #7a5a12;
+  --app-tone-danger-bg: #f6e3df;
+  --app-tone-danger-fg: #8c2f22;
+  --app-tone-accent-bg: #efe9d8;
+  --app-tone-accent-fg: #5c5230;
+
+  --app-radius: 6px;
+  --app-gap: 16px;
+  --app-content-max: 1440px;
+}

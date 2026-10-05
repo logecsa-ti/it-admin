@@ -1,0 +1,201 @@
+<div class="page">
+  @if (ticket.isLoading() && !data()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (data(); as t) {
+    <app-page-header [title]="t.title" [eyebrow]="t.ticketNumber" backLink="/tickets" [subtitle]="t.categoryName + ' · creado ' + (t.createdAt | appDate)">
+      @for (action of transitions(); track action.status) {
+        @if (action.primary) {
+          <button mat-flat-button type="button" (click)="changeStatus(action)"><mat-icon>{{ action.icon }}</mat-icon>{{ action.label }}</button>
+        }
+      }
+      @if (transitions().length > 0 && !transitions().every((a) => a.primary)) {
+        <button mat-stroked-button type="button" [matMenuTriggerFor]="statusMenu">
+          <mat-icon>swap_horiz</mat-icon>Cambiar estado
+        </button>
+        <mat-menu #statusMenu="matMenu" xPosition="before">
+          @for (action of transitions(); track action.status) {
+            @if (!action.primary) {
+              <button mat-menu-item type="button" (click)="changeStatus(action)"><mat-icon>{{ action.icon }}</mat-icon>{{ action.label }}</button>
+            }
+          }
+        </mat-menu>
+      }
+    </app-page-header>
+
+    @if (awaitingApproval()) {
+      <div class="banner warning" role="status">
+        <mat-icon>pending_actions</mat-icon>
+        <div class="banner-text">
+          <strong>Pendiente de aprobacion</strong>
+          <span>Esta solicitud requiere aprobacion antes de ser atendida.</span>
+        </div>
+        @if (canApprove()) {
+          <button mat-stroked-button type="button" (click)="decide(false)">Rechazar</button>
+          <button mat-flat-button type="button" (click)="decide(true)">Aprobar</button>
+        }
+      </div>
+    }
+
+    @if (t.status === 'Resolved' && isRequester()) {
+      <div class="banner info" role="status">
+        <mat-icon>task_alt</mat-icon>
+        <div class="banner-text">
+          <strong>TI marco este ticket como resuelto</strong>
+          <span>Confirme la solucion para cerrarlo, o reabralo si el problema continua.</span>
+        </div>
+      </div>
+    }
+
+    <div class="two-columns">
+      <div class="page">
+        <section class="panel">
+          <div class="panel-title">
+            <h2>Descripcion</h2>
+            <div class="badges">
+              <app-status-badge kind="TicketType" [value]="t.type" />
+              <app-status-badge kind="TicketPriority" [value]="t.priority" />
+              <app-status-badge kind="TicketStatus" [value]="t.status" />
+            </div>
+          </div>
+          <div class="panel-body">
+            <p class="description">{{ t.description }}</p>
+            @if (t.resolutionNotes) {
+              <div class="resolution">
+                <div class="resolution-title"><mat-icon inline>task_alt</mat-icon> Solucion</div>
+                <p>{{ t.resolutionNotes }}</p>
+                @if (t.resolvedAt) { <span class="subtle">Resuelto {{ t.resolvedAt | appDate }}</span> }
+              </div>
+            }
+            @if (t.approvalComment) {
+              <p class="subtle">Comentario de aprobacion: {{ t.approvalComment }}</p>
+            }
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">
+            <h2>Conversacion</h2>
+            <span class="subtle">{{ comments().length }} comentarios</span>
+          </div>
+          <ul class="comments">
+            @for (comment of comments(); track comment.id) {
+              <li [class.internal]="comment.isInternal" [class.own]="comment.userId === t.requesterId">
+                <div class="comment-head">
+                  <strong>{{ comment.userName }}</strong>
+                  @if (comment.isInternal) { <app-status-badge label="Nota interna" tone="accent" /> }
+                  <span class="subtle">{{ comment.createdAt | appDate }}</span>
+                </div>
+                <p>{{ comment.content }}</p>
+              </li>
+            } @empty {
+              <li class="empty subtle">Aun no hay comentarios.</li>
+            }
+          </ul>
+          @if (canComment()) {
+            <div class="composer">
+              <mat-form-field>
+                <mat-label>Escribir un comentario</mat-label>
+                <textarea matInput rows="3" [formControl]="newComment" maxlength="4000"></textarea>
+              </mat-form-field>
+              <div class="actions">
+                @if (isAgent()) {
+                  <mat-checkbox [formControl]="internal">Nota interna (no visible para el solicitante)</mat-checkbox>
+                }
+                <span class="spacer"></span>
+                <button mat-flat-button type="button" [disabled]="posting() || !newComment.value.trim()" (click)="postComment()">
+                  <mat-icon>send</mat-icon>Comentar
+                </button>
+              </div>
+            </div>
+          }
+        </section>
+      </div>
+
+      <div class="page">
+        <section class="panel">
+          <div class="panel-title"><h2>Detalles</h2></div>
+          <div class="panel-body">
+            <dl class="detail-list">
+              <div><dt>Solicitante</dt><dd>{{ t.requesterName }}</dd></div>
+              <div>
+                <dt>Asignado a</dt>
+                <dd>
+                  {{ t.assignedToName ?? 'Sin asignar' }}
+                  @if (canAssign()) {
+                    <span class="assign-links">
+                      @if (t.assignedToId !== myId()) {
+                        <button type="button" class="link" (click)="assignToMe()">Asignarme</button>
+                      }
+                      <ng-container *appCan="P.UsersView"> · <button type="button" class="link" (click)="assign()">Asignar…</button></ng-container>
+                    </span>
+                  }
+                </dd>
+              </div>
+              @if (t.assetCode) {
+                <div><dt>Activo</dt><dd><a [routerLink]="['/activos', t.assetId]" class="mono">{{ t.assetCode }}</a></dd></div>
+              }
+              @if (t.neededByDate) {
+                <div><dt>Fecha requerida</dt><dd>{{ t.neededByDate | appDate: 'date' }}</dd></div>
+              }
+              @if (t.approvalStatus) {
+                <div><dt>Aprobacion</dt><dd><app-status-badge kind="ApprovalStatus" [value]="t.approvalStatus" /></dd></div>
+              }
+              <div><dt>Ultima actualizacion</dt><dd>{{ (t.updatedAt ?? t.createdAt) | appDate }}</dd></div>
+            </dl>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">
+            <h2>Acuerdo de servicio (SLA)</h2>
+            @if (t.sla.isSlaBreached) {
+              <app-status-badge label="Vencido" tone="danger" />
+            } @else if (t.sla.dueAtResolution) {
+              <app-status-badge label="En plazo" tone="success" />
+            }
+          </div>
+          <div class="panel-body">
+            <dl class="detail-list">
+              <div>
+                <dt>Primera respuesta</dt>
+                <dd [class.breached]="t.sla.responseBreached">
+                  @if (t.sla.firstResponseAt) { Respondido {{ t.sla.firstResponseAt | appDate }} }
+                  @else { Antes de {{ t.sla.dueAtResponse | appDate }} }
+                </dd>
+              </div>
+              <div>
+                <dt>Resolucion</dt>
+                <dd [class.breached]="t.sla.resolutionBreached">Antes de {{ t.sla.dueAtResolution | appDate }}</dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title"><h2>Historial</h2></div>
+          <ol class="timeline">
+            @for (entry of history(); track entry.id) {
+              <li>
+                <span class="dot" aria-hidden="true"></span>
+                <div>
+                  <div class="timeline-title">
+                    @if (entry.fromStatus) {
+                      <app-status-badge kind="TicketStatus" [value]="entry.fromStatus" /> <mat-icon inline>arrow_forward</mat-icon>
+                    }
+                    <app-status-badge kind="TicketStatus" [value]="entry.toStatus" />
+                  </div>
+                  <div class="subtle">{{ entry.userName ?? 'Sistema' }} · {{ entry.timestamp | appDate }}</div>
+                  @if (entry.comment) { <div class="timeline-comment">{{ entry.comment }}</div> }
+                </div>
+              </li>
+            }
+          </ol>
+        </section>
+
+        <app-documents-panel entityName="Ticket" [entityId]="t.id" [canUpload]="canUploadDocs() && canComment()" [canManage]="isAgent()" />
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,176 @@
+<div class="page">
+  <app-page-header title="Reportes" subtitle="Indicadores de inventario, mesa de ayuda, licencias y costos.">
+    <div class="range">
+      <mat-form-field>
+        <mat-label>Desde</mat-label>
+        <input matInput [matDatepicker]="fromPicker" [ngModel]="from()" (ngModelChange)="from.set($event)" />
+        <mat-datepicker-toggle matIconSuffix [for]="fromPicker" />
+        <mat-datepicker #fromPicker />
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Hasta</mat-label>
+        <input matInput [matDatepicker]="toPicker" [ngModel]="to()" (ngModelChange)="to.set($event)" />
+        <mat-datepicker-toggle matIconSuffix [for]="toPicker" />
+        <mat-datepicker #toPicker />
+      </mat-form-field>
+    </div>
+  </app-page-header>
+
+  <section class="panel">
+    <div class="progress">@if (loading()) { <mat-progress-bar mode="indeterminate" /> }</div>
+    <mat-tab-group [selectedIndex]="tabIndex()" (selectedIndexChange)="selectTab($event)" animationDuration="0ms">
+      <!-- Activos -->
+      <mat-tab label="Activos" [disabled]="!canAssets()">
+        @if (assetSummary(); as a) {
+          <div class="tab-body">
+            <div class="tab-actions" *appCan="P.ReportsExport">
+              <button mat-stroked-button type="button" [matMenuTriggerFor]="assetExport" [disabled]="exporter.busy()"><mat-icon>download</mat-icon>Exportar</button>
+              <mat-menu #assetExport="matMenu">
+                <button mat-menu-item type="button" (click)="export('assets', 'xlsx')">Inventario (Excel)</button>
+                <button mat-menu-item type="button" (click)="export('assets-by-user', 'xlsx')">Activos por usuario (Excel)</button>
+                <button mat-menu-item type="button" (click)="export('assets', 'csv')">Inventario (CSV)</button>
+              </mat-menu>
+            </div>
+            <div class="kpis">
+              <app-kpi-card label="Activos" icon="inventory_2" [value]="a.total" />
+              <app-kpi-card label="Valor de compra" icon="payments" [value]="a.totalPurchaseCost | money" />
+              <app-kpi-card label="Garantias por vencer" icon="verified_user" hint="Proximos 90 dias" [tone]="a.warrantyExpiringIn90Days > 0 ? 'warning' : 'neutral'" [value]="a.warrantyExpiringIn90Days" />
+            </div>
+            <div class="charts">
+              <div><h3>Por estado</h3><app-bar-list [items]="a.byStatus" [labelFn]="assetStatusLabel" /></div>
+              <div><h3>Por tipo</h3><app-bar-list [items]="a.byType" /></div>
+              <div><h3>Por departamento</h3><app-bar-list [items]="a.byDepartment" /></div>
+              <div><h3>Por ubicacion</h3><app-bar-list [items]="a.byLocation" /></div>
+            </div>
+            <h3 class="table-title">Activos por usuario</h3>
+            <div class="table-scroll">
+              <table mat-table [dataSource]="byUser()" aria-label="Activos por usuario">
+                <ng-container matColumnDef="user"><th mat-header-cell *matHeaderCellDef>Usuario</th><td mat-cell *matCellDef="let r">{{ r.userName }}<div class="subtle">{{ r.email }}</div></td></ng-container>
+                <ng-container matColumnDef="count"><th mat-header-cell *matHeaderCellDef class="end">Cantidad</th><td mat-cell *matCellDef="let r" class="end">{{ r.assetCount }}</td></ng-container>
+                <ng-container matColumnDef="codes"><th mat-header-cell *matHeaderCellDef>Activos</th><td mat-cell *matCellDef="let r" class="mono wrap">{{ r.assetCodes.join(', ') }}</td></ng-container>
+                <tr mat-header-row *matHeaderRowDef="['user', 'count', 'codes']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['user', 'count', 'codes']"></tr>
+              </table>
+            </div>
+          </div>
+        }
+      </mat-tab>
+
+      <!-- Tickets -->
+      <mat-tab label="Tickets" [disabled]="!canTickets()">
+        @if (ticketReport(); as t) {
+          <div class="tab-body">
+            <div class="tab-actions" *appCan="P.ReportsExport">
+              <button mat-stroked-button type="button" [disabled]="exporter.busy()" (click)="export('tickets', 'xlsx')"><mat-icon>download</mat-icon>Exportar tickets</button>
+            </div>
+            <div class="kpis">
+              <app-kpi-card label="Creados" icon="add_circle" [value]="t.created" />
+              <app-kpi-card label="Resueltos" icon="task_alt" tone="success" [value]="t.resolved" />
+              <app-kpi-card label="Abiertos" icon="inbox" [value]="t.open" />
+              <app-kpi-card label="Tiempo medio de resolucion" icon="schedule" [value]="t.averageResolutionHours != null ? (t.averageResolutionHours | number: '1.0-1') + ' h' : '—'" />
+            </div>
+            <div class="charts">
+              <div><h3>Por estado</h3><app-bar-list [items]="t.byStatus" [labelFn]="ticketStatusLabel" /></div>
+              <div><h3>Por prioridad</h3><app-bar-list [items]="t.byPriority" [labelFn]="priorityLabel" /></div>
+              <div><h3>Por categoria</h3><app-bar-list [items]="t.byCategory" /></div>
+              <div><h3>Por tecnico</h3><app-bar-list [items]="t.byTechnician" /></div>
+              <div><h3>Por tipo</h3><app-bar-list [items]="t.byType" [labelFn]="typeLabel" /></div>
+            </div>
+          </div>
+        }
+      </mat-tab>
+
+      <!-- SLA -->
+      <mat-tab label="SLA" [disabled]="!canTickets()">
+        @if (slaReport(); as s) {
+          <div class="tab-body">
+            <div class="tab-actions" *appCan="P.ReportsExport">
+              <button mat-stroked-button type="button" [disabled]="exporter.busy()" (click)="export('sla', 'xlsx', true)"><mat-icon>download</mat-icon>Exportar</button>
+            </div>
+            <div class="kpis">
+              <app-kpi-card label="Resueltos" icon="task_alt" [value]="s.resolved" />
+              <app-kpi-card label="Dentro de SLA" icon="verified" tone="success" [value]="s.withinSla" />
+              <app-kpi-card label="Cumplimiento" icon="percent" [tone]="(s.compliancePercent ?? 100) >= 90 ? 'success' : 'warning'" [value]="s.compliancePercent != null ? s.compliancePercent + ' %' : '—'" />
+            </div>
+            <div class="charts two">
+              @for (group of [{ title: 'Por prioridad', rows: s.byPriority }, { title: 'Por categoria', rows: s.byCategory }]; track group.title) {
+                <div>
+                  <h3>{{ group.title }}</h3>
+                  <table mat-table [dataSource]="group.rows" [attr.aria-label]="'Cumplimiento ' + group.title">
+                    <ng-container matColumnDef="label"><th mat-header-cell *matHeaderCellDef>Grupo</th><td mat-cell *matCellDef="let r">{{ group.title === 'Por prioridad' ? priorityLabel(r.label) : r.label }}</td></ng-container>
+                    <ng-container matColumnDef="resolved"><th mat-header-cell *matHeaderCellDef class="end">Resueltos</th><td mat-cell *matCellDef="let r" class="end">{{ r.resolved }}</td></ng-container>
+                    <ng-container matColumnDef="within"><th mat-header-cell *matHeaderCellDef class="end">En SLA</th><td mat-cell *matCellDef="let r" class="end">{{ r.withinSla }}</td></ng-container>
+                    <ng-container matColumnDef="pct"><th mat-header-cell *matHeaderCellDef class="end">%</th><td mat-cell *matCellDef="let r" class="end strong">{{ r.compliancePercent != null ? r.compliancePercent + ' %' : '—' }}</td></ng-container>
+                    <tr mat-header-row *matHeaderRowDef="['label', 'resolved', 'within', 'pct']"></tr>
+                    <tr mat-row *matRowDef="let row; columns: ['label', 'resolved', 'within', 'pct']"></tr>
+                  </table>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </mat-tab>
+
+      <!-- Licencias -->
+      <mat-tab label="Licencias" [disabled]="!canLicenses()">
+        <div class="tab-body">
+          <div class="tab-actions" *appCan="P.ReportsExport">
+            <button mat-stroked-button type="button" [disabled]="exporter.busy()" (click)="export('licenses', 'xlsx')"><mat-icon>download</mat-icon>Exportar</button>
+          </div>
+          <div class="table-scroll">
+            <table mat-table [dataSource]="licenseRows()" aria-label="Uso de licencias por software">
+              <ng-container matColumnDef="software"><th mat-header-cell *matHeaderCellDef>Software</th><td mat-cell *matCellDef="let r" class="strong">{{ r.software }}</td></ng-container>
+              <ng-container matColumnDef="licenses"><th mat-header-cell *matHeaderCellDef class="end">Licencias</th><td mat-cell *matCellDef="let r" class="end">{{ r.licenses }}</td></ng-container>
+              <ng-container matColumnDef="seats"><th mat-header-cell *matHeaderCellDef class="end">Puestos</th><td mat-cell *matCellDef="let r" class="end">{{ r.usedSeats }} / {{ r.seats }}</td></ng-container>
+              <ng-container matColumnDef="util">
+                <th mat-header-cell *matHeaderCellDef>Uso</th>
+                <td mat-cell *matCellDef="let r">
+                  <div class="util"><div class="bar"><div [style.width.%]="r.utilizationPercent ?? 0"></div></div>{{ r.utilizationPercent != null ? r.utilizationPercent + ' %' : '—' }}</div>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="expired"><th mat-header-cell *matHeaderCellDef class="end">Vencidas</th><td mat-cell *matCellDef="let r" class="end" [class.danger]="r.expired > 0">{{ r.expired }}</td></ng-container>
+              <ng-container matColumnDef="next"><th mat-header-cell *matHeaderCellDef>Proximo vencimiento</th><td mat-cell *matCellDef="let r">{{ r.nextExpiration | appDate: 'date' }}</td></ng-container>
+              <tr mat-header-row *matHeaderRowDef="['software', 'licenses', 'seats', 'util', 'expired', 'next']"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['software', 'licenses', 'seats', 'util', 'expired', 'next']"></tr>
+            </table>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Costos -->
+      <mat-tab label="Costos">
+        @if (costReport(); as c) {
+          <div class="tab-body">
+            <div class="tab-actions" *appCan="P.ReportsExport">
+              <button mat-stroked-button type="button" [disabled]="exporter.busy()" (click)="export('costs', 'xlsx', true)"><mat-icon>download</mat-icon>Exportar</button>
+            </div>
+            <div class="kpis">
+              <app-kpi-card label="Total" icon="account_balance" [value]="c.total | money" />
+              <app-kpi-card label="Compras" icon="shopping_cart" [value]="c.purchases | money" />
+              <app-kpi-card label="Mantenimiento" icon="build" [value]="c.maintenance | money" />
+              <app-kpi-card label="Licencias" icon="key" [value]="c.licenses | money" />
+            </div>
+            <h3 class="table-title">Por mes</h3>
+            <div class="months" role="list" aria-label="Costos por mes">
+              @for (m of c.byMonth; track m.year * 100 + m.month) {
+                <div class="month" role="listitem">
+                  <div class="stack" [attr.aria-label]="(m.total | money) + ' en ' + monthLabel(m.month, m.year)">
+                    <div class="seg purchases" [style.height.%]="(m.purchases / costMax()) * 100"></div>
+                    <div class="seg maintenance" [style.height.%]="(m.maintenance / costMax()) * 100"></div>
+                    <div class="seg licenses" [style.height.%]="(m.licenses / costMax()) * 100"></div>
+                  </div>
+                  <span class="month-label">{{ monthLabel(m.month, m.year) }}</span>
+                </div>
+              } @empty {
+                <p class="subtle">Sin costos en el periodo.</p>
+              }
+            </div>
+            <div class="legend">
+              <span><i class="purchases"></i>Compras</span><span><i class="maintenance"></i>Mantenimiento</span><span><i class="licenses"></i>Licencias</span>
+            </div>
+          </div>
+        }
+      </mat-tab>
+    </mat-tab-group>
+  </section>
+</div>

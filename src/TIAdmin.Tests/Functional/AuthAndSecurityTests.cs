@@ -247,3 +247,32 @@ public sealed class LoginRateLimitTests(LowLoginLimitApiFactory factory) : IClas
         statuses.Last().Should().Be(HttpStatusCode.TooManyRequests);
     }
 }
+
+/// <summary>
+/// La renovacion tiene su propio limitador: agotar el de login (fuerza bruta de contrasenas) no debe
+/// impedir que las sesiones validas se renueven al recargar la SPA.
+/// </summary>
+public sealed class RefreshRateLimitTests(LowLoginLimitApiFactory factory) : IClassFixture<LowLoginLimitApiFactory>
+{
+    [Fact]
+    public async Task Refresh_WhenLoginLimitExhausted_ShouldStillSucceed()
+    {
+        using var client = factory.CreateAnonymousClient();
+        var login = await client.PostAsJsonAsync("/api/v1/auth/login",
+            new { userName = TIAdminApiFactory.AdminUserName, password = TIAdminApiFactory.AdminPassword });
+        var session = (await login.Content.ReadFromJsonAsync<ApiEnvelope<RefreshData>>())!.Data!;
+
+        HttpStatusCode last;
+        do
+        {
+            last = (await client.PostAsJsonAsync("/api/v1/auth/login", new { userName = "nobody", password = "Nothing123!" })).StatusCode;
+        }
+        while (last != HttpStatusCode.TooManyRequests);
+
+        var refresh = await client.PostAsJsonAsync("/api/v1/auth/refresh", new { refreshToken = session.RefreshToken });
+
+        refresh.StatusCode.Should().Be(HttpStatusCode.OK, await refresh.Content.ReadAsStringAsync());
+    }
+
+    private sealed record RefreshData(string AccessToken, string RefreshToken);
+}

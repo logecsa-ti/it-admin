@@ -147,7 +147,7 @@ public sealed class AssetsController(IAssetService assets, IAssetImportService i
     [Authorize(Policy = Perms.AssetsCreate)]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(30 * 1024 * 1024)]
-    public async Task<ActionResult<ApiResponse<ImportResult>>> Import([FromForm] IFormFile? file, [FromQuery] bool dryRun, CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<ImportResult>>> Import(IFormFile? file, [FromQuery] bool dryRun, CancellationToken cancellationToken)
     {
         if (file is null)
         {

@@ -1,0 +1,127 @@
+<div class="page">
+  @if (asset.isLoading() && !data()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (data(); as a) {
+    <app-page-header [title]="a.name" [eyebrow]="a.assetCode" backLink="/activos" [subtitle]="a.assetTypeName + (a.brand ? ' · ' + a.brand : '') + (a.model ? ' ' + a.model : '')">
+      @if (a.status === 'Assigned') {
+        <button mat-stroked-button type="button" *appCan="P.AssetsUnassign" (click)="returnAsset(a)">
+          <mat-icon>assignment_return</mat-icon>Registrar devolucion
+        </button>
+      } @else if (a.status === 'Available') {
+        <button mat-flat-button type="button" *appCan="P.AssetsAssign" (click)="assign(a)">
+          <mat-icon>assignment_ind</mat-icon>Asignar
+        </button>
+      }
+      <a mat-stroked-button [routerLink]="['/activos', a.id, 'editar']" *appCan="P.AssetsUpdate"><mat-icon>edit</mat-icon>Editar</a>
+      <button mat-icon-button type="button" [matMenuTriggerFor]="more" aria-label="Mas acciones" *appCan="[P.AssetsUpdate, P.AssetsDelete]">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #more="matMenu" xPosition="before">
+        @if (a.status !== 'Assigned') {
+          <button mat-menu-item type="button" *appCan="P.AssetsUpdate" (click)="changeStatus(a)"><mat-icon>swap_horiz</mat-icon>Cambiar estado</button>
+        }
+        <button mat-menu-item type="button" *appCan="P.AssetsDelete" (click)="remove(a)"><mat-icon>delete</mat-icon>Eliminar</button>
+      </mat-menu>
+    </app-page-header>
+
+    <div class="two-columns">
+      <div class="page">
+        <section class="panel">
+          <div class="panel-title">
+            <h2>Informacion general</h2>
+            <app-status-badge kind="AssetStatus" [value]="a.status" />
+          </div>
+          <div class="panel-body">
+            <dl class="detail-grid">
+              <div><dt>Codigo</dt><dd class="mono">{{ a.assetCode }}</dd></div>
+              <div><dt>Numero de serie</dt><dd class="mono">{{ a.serialNumber ?? '—' }}</dd></div>
+              <div><dt>Tipo</dt><dd>{{ a.assetTypeName }}</dd></div>
+              <div><dt>Marca / modelo</dt><dd>{{ a.brand ?? '—' }} {{ a.model ?? '' }}</dd></div>
+              <div><dt>Departamento</dt><dd>{{ a.departmentName ?? '—' }}</dd></div>
+              <div><dt>Ubicacion</dt><dd>{{ a.locationName ?? '—' }}</dd></div>
+              <div><dt>Proveedor</dt><dd>{{ a.vendorName ?? '—' }}</dd></div>
+              <div><dt>Fecha de compra</dt><dd>{{ a.purchaseDate | appDate: 'date' }}</dd></div>
+              <div><dt>Costo</dt><dd>{{ a.purchaseCost | money }}</dd></div>
+              <div><dt>Garantia hasta</dt><dd>{{ a.warrantyExpiration | appDate: 'date' }}</dd></div>
+              <div><dt>Registrado</dt><dd>{{ a.createdAt | appDate }}</dd></div>
+              <div><dt>Ultima modificacion</dt><dd>{{ a.updatedAt | appDate }}</dd></div>
+            </dl>
+            @if (a.description || a.notes) {
+              <dl class="detail-grid notes">
+                @if (a.description) { <div class="span-all"><dt>Descripcion</dt><dd>{{ a.description }}</dd></div> }
+                @if (a.notes) { <div class="span-all"><dt>Notas</dt><dd>{{ a.notes }}</dd></div> }
+              </dl>
+            }
+          </div>
+        </section>
+
+        <section class="panel">
+          <mat-tab-group animationDuration="0ms">
+            <mat-tab label="Asignaciones">
+              <app-data-table
+                caption="Historial de asignaciones"
+                [columns]="assignmentColumns"
+                [rows]="assignments.items()"
+                [loading]="assignments.loading()"
+                [total]="assignments.total()"
+                [page]="assignments.page()"
+                [pageSize]="assignments.pageSize()"
+                (pageChange)="assignments.onPage($event)"
+                emptyTitle="Sin asignaciones"
+                emptyMessage="Este activo nunca ha sido asignado."
+              >
+                <ng-template appCell="from" let-row>{{ row.assignmentDate | appDate }}</ng-template>
+                <ng-template appCell="to" let-row>
+                  @if (row.isActive) {
+                    <app-status-badge label="Vigente" tone="info" />
+                  } @else {
+                    {{ row.returnDate | appDate }}
+                  }
+                </ng-template>
+              </app-data-table>
+            </mat-tab>
+            <mat-tab label="Movimientos">
+              <app-data-table
+                caption="Movimientos del activo"
+                [columns]="movementColumns"
+                [rows]="movements.items()"
+                [loading]="movements.loading()"
+                [total]="movements.total()"
+                [page]="movements.page()"
+                [pageSize]="movements.pageSize()"
+                (pageChange)="movements.onPage($event)"
+                emptyTitle="Sin movimientos"
+              >
+                <ng-template appCell="date" let-row>{{ row.timestamp | appDate }}</ng-template>
+              </app-data-table>
+            </mat-tab>
+          </mat-tab-group>
+        </section>
+      </div>
+
+      <div class="page">
+        <section class="panel">
+          <div class="panel-title"><h2>Asignacion actual</h2></div>
+          @if (a.currentAssignment; as current) {
+            <div class="assignment">
+              <mat-icon>person</mat-icon>
+              <div>
+                <div class="who">{{ current.userName }}</div>
+                <div class="subtle">Desde {{ current.assignmentDate | appDate: 'date' }} · por {{ current.assignedByName }}</div>
+                @if (current.conditionAtAssignment) {
+                  <div class="subtle">Condicion: {{ current.conditionAtAssignment }}</div>
+                }
+              </div>
+            </div>
+          } @else {
+            <p class="subtle panel-body">Sin asignar.</p>
+          }
+        </section>
+
+        <app-documents-panel entityName="Asset" [entityId]="a.id" [canUpload]="canUploadDocs()" [canManage]="canUploadDocs()" />
+      </div>
+    </div>
+  }
+</div>

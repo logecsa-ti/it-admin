@@ -1,0 +1,109 @@
+// Tema corporativo TI Admin: verde oliva sobrio sobre blanco (Angular Material 3).
+// Los colores base se generan con `ng generate @angular/material:theme-color` (styles/_theme-colors.scss);
+// las superficies se fuerzan a blanco/gris neutro para que el oliva sea solo acento.
+@use '@angular/material' as mat;
+@use './styles/theme-colors' as palette;
+@use './styles/tokens';
+@use './styles/base';
+@use './styles/utilities';
+
+html {
+  color-scheme: light;
+
+  @include mat.theme(
+    (
+      color: (
+        theme-type: light,
+        primary: palette.$primary-palette,
+        tertiary: palette.$tertiary-palette,
+      ),
+      typography: (
+        plain-family: tokens.$font-family,
+        brand-family: tokens.$font-family,
+      ),
+      density: -1,
+    )
+  );
+
+  // Superficies blancas y neutras (M3 las tiñe del color primario por defecto).
+  @include mat.theme-overrides(
+    (
+      background: #ffffff,
+      surface: #ffffff,
+      surface-bright: #ffffff,
+      surface-container-lowest: #ffffff,
+      surface-container-low: #fafaf8,
+      surface-container: #f5f5f2,
+      surface-container-high: #efefeb,
+      surface-container-highest: #e8e9e3,
+      outline-variant: #d9dbd2,
+      corner-extra-small: 3px,
+      corner-small: 4px,
+      corner-medium: 6px,
+      corner-large: 8px,
+      corner-extra-large: 10px,
+    )
+  );
+
+  // Componentes: bordes rectos y discretos, sin sombras marcadas.
+  @include mat.card-overrides(
+    (
+      elevated-container-elevation: none,
+      outlined-outline-color: var(--app-border),
+    )
+  );
+  @include mat.table-overrides(
+    (
+      header-headline-weight: 600,
+      header-headline-color: var(--app-text-muted),
+      header-headline-size: 0.78rem,
+      row-item-outline-color: var(--app-border-soft),
+    )
+  );
+  @include mat.dialog-overrides(
+    (
+      container-shape: 8px,
+    )
+  );
+  @include mat.button-overrides(
+    (
+      filled-container-shape: 4px,
+      outlined-container-shape: 4px,
+      protected-container-shape: 4px,
+      text-container-shape: 4px,
+    )
+  );
+  @include mat.snack-bar-overrides(
+    (
+      container-color: #2b3312,
+      supporting-text-color: #ffffff,
+      button-color: #d8eb9b,
+    )
+  );
+}
+
+// Barras de filtros: campos compactos (40 px) para que quepan en una linea.
+.filters {
+  @include mat.form-field-overrides(
+    (
+      container-height: 40px,
+      container-vertical-padding: 8px,
+      outlined-label-text-size: 0.875rem,
+      container-text-size: 0.875rem,
+    )
+  );
+  @include mat.select-overrides(
+    (
+      trigger-text-size: 0.875rem,
+    )
+  );
+}
+
+.filters {
+  @include mat.button-toggle-overrides(
+    (
+      height: 40px,
+      shape: 4px,
+    )
+  );
+}

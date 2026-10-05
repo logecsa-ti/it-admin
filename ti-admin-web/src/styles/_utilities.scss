@@ -1,0 +1,133 @@
+@use './tokens';
+
+// Utilidades de maquetacion compartidas por las paginas de features.
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-gap);
+  max-width: var(--app-content-max);
+  margin: 0;
+  width: 100%;
+}
+
+.panel {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+}
+
+.panel-body {
+  padding: 16px 20px;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--app-border-soft);
+
+  h2 {
+    font-size: 0.95rem;
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  column-gap: 16px;
+  row-gap: 4px;
+
+  .span-all {
+    grid-column: 1 / -1;
+  }
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--app-border-soft);
+
+  .mat-mdc-form-field {
+    width: 180px;
+  }
+
+  .mat-mdc-form-field-subscript-wrapper {
+    display: none;
+  }
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px 24px;
+  margin: 0;
+
+  dt {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--app-text-subtle);
+  }
+
+  dd {
+    margin: 2px 0 0;
+    color: var(--app-text);
+    word-break: break-word;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.muted {
+  color: var(--app-text-muted);
+}
+
+.subtle {
+  color: var(--app-text-subtle);
+  font-size: 0.85rem;
+}
+
+.mono {
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.two-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: var(--app-gap);
+  align-items: start;
+
+  @media (max-width: tokens.$breakpoint-mobile) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

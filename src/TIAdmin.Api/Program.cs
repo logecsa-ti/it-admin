@@ -54,6 +54,11 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Sistema Administrativo de Tecnologias de Informacion (SPECS.md v1.0)"
     });
 
+    // El frontend genera sus tipos desde este documento: respetar la nulabilidad de C#
+    // (string vs string?) para que los modelos TypeScript sean exactos.
+    options.SupportNonNullableReferenceTypes();
+    options.NonNullableReferenceTypesAsRequired();
+
     var securityScheme = new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -198,6 +203,17 @@ if (rateLimitOptions.Enabled)
                     Window = TimeSpan.FromMinutes(rateLimitOptions.LoginWindowMinutes),
                     QueueLimit = 0
                 }));
+
+        // Renovacion de sesion: limite propio, mas holgado que el de login.
+        options.AddPolicy("refresh", httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = rateLimitOptions.RefreshPermitLimit,
+                    Window = TimeSpan.FromMinutes(rateLimitOptions.LoginWindowMinutes),
+                    QueueLimit = 0
+                }));
     });
 }
 
@@ -248,7 +264,7 @@ app.UseCors(policy =>
     policy.WithOrigins(allowedOrigins)
         .AllowAnyHeader()
         .AllowAnyMethod()
-        .WithExposedHeaders(CorrelationIdMiddleware.HeaderName)
+        .WithExposedHeaders(CorrelationIdMiddleware.HeaderName, "Content-Disposition")
         .SetPreflightMaxAge(TimeSpan.FromHours(1));
 });
 

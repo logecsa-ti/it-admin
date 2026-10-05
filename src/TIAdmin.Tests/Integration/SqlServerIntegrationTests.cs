@@ -23,13 +23,14 @@ public sealed class SqlServerIntegrationTests(SqlServerApiFactory factory) : ICl
     public async Task ReadEndpoints_ShouldTranslateToSql()
     {
         using var admin = await factory.CreateAdminClientAsync();
+        var asset = await PostAsync(admin, "/api/v1/assets", new { assetCode = Code(), name = "Integracion", assetTypeId = 1 });
         string[] urls =
         [
             "/api/v1/assets", "/api/v1/asset-types", "/api/v1/assignments", "/api/v1/departments", "/api/v1/locations",
             "/api/v1/users", "/api/v1/roles", "/api/v1/permissions", "/api/v1/vendors", "/api/v1/contracts", "/api/v1/software",
             "/api/v1/licenses", "/api/v1/tickets", "/api/v1/tickets?overdue=true", "/api/v1/ticket-categories", "/api/v1/sla-policies",
             "/api/v1/maintenances", "/api/v1/changes", "/api/v1/purchases", "/api/v1/alerts/licenses", "/api/v1/alerts/contracts", "/api/v1/alerts/maintenance", "/api/v1/audit", "/api/v1/configuration",
-            "/api/v1/dashboard/summary", "/api/v1/notifications", "/api/v1/notifications/unread-count",
+            "/api/v1/dashboard/summary", $"/api/v1/documents?entityName=Asset&entityId={asset.Id}", "/api/v1/notifications", "/api/v1/notifications/unread-count",
             "/api/v1/reports/assets/summary", "/api/v1/reports/assets/by-user", "/api/v1/reports/tickets", "/api/v1/reports/licenses", "/api/v1/reports/costs", "/api/v1/reports/sla",
             "/api/v1/reports/assets/export?format=xlsx", "/api/v1/reports/tickets/export?format=csv", "/api/v1/reports/audit/export?format=csv"
         ];

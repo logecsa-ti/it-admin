@@ -1,0 +1,81 @@
+<div class="login">
+  <section class="brand-panel" aria-hidden="true">
+    <div class="brand">
+      <span class="mark">TI</span>
+      <span>{{ settings.appName() }}</span>
+    </div>
+    <div class="pitch">
+      <h1>Administracion de Tecnologias de Informacion</h1>
+      <p>Inventario de activos, licencias, mesa de ayuda, mantenimientos y auditoria en un solo lugar.</p>
+    </div>
+    <ul class="features">
+      <li><span class="material-symbols-outlined">inventory_2</span>Activos y asignaciones</li>
+      <li><span class="material-symbols-outlined">confirmation_number</span>Mesa de ayuda con SLA</li>
+      <li><span class="material-symbols-outlined">key</span>Licencias y contratos</li>
+      <li><span class="material-symbols-outlined">policy</span>Auditoria completa</li>
+    </ul>
+  </section>
+
+  <section class="form-panel">
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate aria-labelledby="login-title">
+      <h2 id="login-title">Iniciar sesion</h2>
+      <p class="muted">Ingrese con su usuario corporativo.</p>
+
+      @if (expired()) {
+        <div class="notice" role="status">
+          <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
+          Su sesion expiro. Ingrese nuevamente para continuar.
+        </div>
+      }
+
+      @if (error()) {
+        <div class="notice error" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">error</span>
+          {{ error() }}
+        </div>
+      }
+
+      <mat-form-field>
+        <mat-label>Usuario</mat-label>
+        <input matInput formControlName="userName" autocomplete="username" autofocus />
+        <mat-icon matPrefix>person</mat-icon>
+        @if (form.controls.userName.hasError('required')) {
+          <mat-error>Ingrese su usuario.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Contrasena</mat-label>
+        <input
+          matInput
+          formControlName="password"
+          autocomplete="current-password"
+          [type]="showPassword() ? 'text' : 'password'"
+        />
+        <mat-icon matPrefix>lock</mat-icon>
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          [attr.aria-label]="showPassword() ? 'Ocultar contrasena' : 'Mostrar contrasena'"
+          (click)="showPassword.set(!showPassword())"
+        >
+          <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (form.controls.password.hasError('required')) {
+          <mat-error>Ingrese su contrasena.</mat-error>
+        }
+      </mat-form-field>
+
+      <button mat-flat-button type="submit" class="submit" [disabled]="submitting()">
+        @if (submitting()) {
+          <mat-spinner diameter="18" />
+        } @else {
+          Ingresar
+        }
+      </button>
+
+      <p class="help subtle">¿Olvido su contrasena? Contacte al area de TI.</p>
+    </form>
+  </section>
+</div>

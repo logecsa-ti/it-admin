@@ -1,0 +1,186 @@
+<div class="page">
+  <app-page-header
+    [title]="greeting()"
+    [subtitle]="data() ? 'Actualizado ' + (data()!.generatedAt | appDate: 'time') : 'Resumen de la operacion de TI'"
+  />
+
+  @if (summary.isLoading() && !data()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Cargando resumen" />
+  }
+
+  @if (data(); as data) {
+    <section aria-labelledby="mine-title">
+      <h2 id="mine-title" class="section-title">Mi actividad</h2>
+      <div class="kpis">
+        <app-kpi-card label="Mis tickets abiertos" icon="confirmation_number" [value]="data.mine.openTickets" link="/tickets" [linkParams]="{ mine: true }" />
+        <app-kpi-card label="Mis activos" icon="devices" [value]="data.mine.assignedAssets" link="/mis-activos" />
+        @if (data.tickets) {
+          <app-kpi-card label="Asignados a mi" icon="assignment_ind" tone="info" [value]="data.mine.ticketsAssignedToMe" link="/tickets" [linkParams]="{ assignedToMe: true }" />
+        }
+      </div>
+    </section>
+
+    @if (data.tickets; as tickets) {
+      <section aria-labelledby="tickets-title">
+        <h2 id="tickets-title" class="section-title">Mesa de ayuda</h2>
+        <div class="kpis">
+          <app-kpi-card label="Tickets abiertos" icon="inbox" [value]="tickets.open" link="/tickets" />
+          <app-kpi-card label="Fuera de SLA" icon="timer_off" [tone]="tickets.overdue > 0 ? 'danger' : 'success'" [value]="tickets.overdue" link="/tickets" [linkParams]="{ overdue: true }" />
+          <app-kpi-card label="Creados (7 dias)" icon="trending_up" [value]="tickets.createdLast7Days" />
+          <app-kpi-card
+            label="Cumplimiento SLA"
+            icon="verified"
+            [tone]="(tickets.slaCompliancePercent ?? 100) >= 90 ? 'success' : 'warning'"
+            [value]="tickets.slaCompliancePercent != null ? tickets.slaCompliancePercent + ' %' : '—'"
+            hint="Ultimos 30 dias"
+          />
+        </div>
+      </section>
+    }
+
+    <div class="grid">
+      @if (data.assets; as assets) {
+        <section class="panel">
+          <div class="panel-title">
+            <h2>Inventario de activos</h2>
+            <a routerLink="/activos" class="link">Ver activos</a>
+          </div>
+          <div class="panel-body">
+            <div class="totals">
+              <div><span class="big">{{ assets.total }}</span><span class="subtle">Total</span></div>
+              <div><span class="big">{{ assets.assigned }}</span><span class="subtle">Asignados</span></div>
+              <div>
+                <span class="big">{{ assets.total ? ((assets.assigned / assets.total) * 100).toFixed(0) : 0 }} %</span>
+                <span class="subtle">En uso</span>
+              </div>
+            </div>
+            <h3 class="sub">Por estado</h3>
+            <app-bar-list [items]="assets.byStatus" [labelFn]="assetStatusLabel" caption="Activos por estado" />
+            <h3 class="sub">Por departamento</h3>
+            <app-bar-list [items]="assets.byDepartment" caption="Activos por departamento" [limit]="6" />
+          </div>
+        </section>
+      }
+
+      @if (data.tickets; as tickets) {
+        <section class="panel">
+          <div class="panel-title">
+            <h2>Tickets abiertos por prioridad</h2>
+            <a routerLink="/tickets" class="link">Ver tickets</a>
+          </div>
+          <div class="panel-body">
+            <app-bar-list [items]="tickets.openByPriority" [labelFn]="priorityLabel" caption="Tickets por prioridad" />
+          </div>
+        </section>
+      }
+
+      @if (data.licenses || data.contracts || data.maintenance) {
+        <section class="panel">
+          <div class="panel-title"><h2>Vencimientos y operacion</h2></div>
+          <div class="panel-body stats">
+            @if (data.licenses; as licenses) {
+              <a class="stat" routerLink="/licencias">
+                <span class="stat-label">Licencias activas</span>
+                <span class="stat-value">{{ licenses.active }}</span>
+                <span class="stat-detail">
+                  <span [class.warn]="licenses.expiringSoon > 0">{{ licenses.expiringSoon }} por vencer</span> ·
+                  <span [class.danger]="licenses.expired > 0">{{ licenses.expired }} vencidas</span>
+                </span>
+              </a>
+            }
+            @if (data.contracts; as contracts) {
+              <a class="stat" routerLink="/contratos">
+                <span class="stat-label">Contratos activos</span>
+                <span class="stat-value">{{ contracts.active }}</span>
+                <span class="stat-detail">
+                  <span [class.warn]="contracts.expiringSoon > 0">{{ contracts.expiringSoon }} por vencer</span> ·
+                  <span [class.danger]="contracts.expired > 0">{{ contracts.expired }} vencidos</span>
+                </span>
+              </a>
+            }
+            @if (data.maintenance; as maintenance) {
+              <a class="stat" routerLink="/mantenimientos">
+                <span class="stat-label">Mantenimientos pendientes</span>
+                <span class="stat-value">{{ maintenance.pending }}</span>
+                <span class="stat-detail">
+                  {{ maintenance.inProgress }} en progreso ·
+                  <span [class.danger]="maintenance.overdue > 0">{{ maintenance.overdue }} vencidos</span>
+                </span>
+              </a>
+            }
+          </div>
+        </section>
+      }
+
+      @if (data.costs; as costs) {
+        <section class="panel">
+          <div class="panel-title">
+            <h2>Costos de TI {{ costs.year }}</h2>
+            <a routerLink="/reportes" [queryParams]="{ tab: 'costos' }" class="link">Ver reporte</a>
+          </div>
+          <div class="panel-body">
+            <div class="cost-total">{{ costs.total | money }}</div>
+            <dl class="cost-lines">
+              <div><dt>Compras</dt><dd>{{ costs.purchases | money }}</dd></div>
+              <div><dt>Mantenimiento</dt><dd>{{ costs.maintenance | money }}</dd></div>
+              <div><dt>Licencias</dt><dd>{{ costs.licenses | money }}</dd></div>
+            </dl>
+          </div>
+        </section>
+      }
+    </div>
+
+    @if (alertCount() > 0) {
+      <section class="panel" aria-labelledby="alerts-title">
+        <div class="panel-title">
+          <h2 id="alerts-title">Alertas activas</h2>
+          <span class="subtle">{{ alertCount() }}</span>
+        </div>
+        <ul class="alerts">
+          @for (alert of contractAlertList(); track alert.contractId) {
+            <li>
+              <mat-icon aria-hidden="true">contract</mat-icon>
+              <div class="alert-text">
+                <a [routerLink]="['/contratos', alert.contractId]">{{ alert.number }} · {{ alert.name }}</a>
+                <span class="subtle">{{ alert.vendorName }} · vence {{ alert.endDate | appDate: 'date' }}</span>
+              </div>
+              <app-status-badge
+                [tone]="alert.isExpired ? 'danger' : 'warning'"
+                [label]="alert.isExpired ? 'Vencido' : alert.daysRemaining + ' dias'"
+              />
+            </li>
+          }
+          @for (alert of licenseAlertList(); track alert.licenseId + alert.alertType) {
+            <li>
+              <mat-icon aria-hidden="true">key</mat-icon>
+              <div class="alert-text">
+                <a [routerLink]="['/licencias', alert.licenseId]">{{ alert.softwareName }} · {{ alert.name }}</a>
+                <span class="subtle">
+                  {{ alert.usedQuantity }}/{{ alert.quantity }} puestos
+                  @if (alert.expirationDate) {
+                    · vence {{ alert.expirationDate | appDate: 'date' }}
+                  }
+                </span>
+              </div>
+              <app-status-badge kind="LicenseAlertType" [value]="alert.alertType" />
+            </li>
+          }
+          @for (alert of maintenanceAlertList(); track alert.assetId + alert.alertType + alert.dueDate) {
+            <li>
+              <mat-icon aria-hidden="true">build</mat-icon>
+              <div class="alert-text">
+                @if (alert.maintenanceId) {
+                  <a [routerLink]="['/mantenimientos', alert.maintenanceId]">{{ alert.maintenanceNumber }} · {{ alert.assetCode }}</a>
+                } @else {
+                  <a [routerLink]="['/activos', alert.assetId]">{{ alert.assetCode }}</a>
+                }
+                <span class="subtle">Fecha {{ alert.dueDate | appDate: 'date' }}</span>
+              </div>
+              <app-status-badge kind="MaintenanceAlertType" [value]="alert.alertType" />
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+</div>

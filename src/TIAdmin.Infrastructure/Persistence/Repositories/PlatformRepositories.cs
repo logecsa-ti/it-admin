@@ -12,8 +12,9 @@ public class DocumentRepository : BaseRepository<Document>, IDocumentRepository
     }
 
     public async Task<IReadOnlyList<DocumentDto>> GetByEntityAsync(string entityName, int entityId, CancellationToken cancellationToken = default) =>
-        await Project(Set.AsNoTracking().Where(d => d.EntityName == entityName && d.EntityId == entityId))
-            .OrderByDescending(d => d.UploadedAt)
+        await Project(Set.AsNoTracking()
+                .Where(d => d.EntityName == entityName && d.EntityId == entityId)
+                .OrderByDescending(d => d.CreatedAt)) // ordenar antes de proyectar: el DTO no se traduce a SQL
             .ToListAsync(cancellationToken);
 
     public async Task<DocumentDto?> GetDtoAsync(int id, CancellationToken cancellationToken = default) =>

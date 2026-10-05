@@ -1,0 +1,93 @@
+@use './tokens';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: tokens.$font-family;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--app-text);
+  background: var(--app-page-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 600;
+  color: var(--app-text);
+  letter-spacing: -0.005em;
+}
+
+h1 {
+  font-size: 1.45rem;
+}
+
+h2 {
+  font-size: 1.1rem;
+}
+
+h3 {
+  font-size: 0.95rem;
+}
+
+a {
+  color: var(--mat-sys-primary);
+}
+
+:focus-visible {
+  outline: 2px solid var(--app-olive-500);
+  outline-offset: 2px;
+}
+
+// Formularios de Material: ancho completo dentro de las rejillas de formulario.
+.form-grid mat-form-field,
+.form-grid .mat-mdc-form-field {
+  width: 100%;
+}
+
+// Tablas: filas clicables y celdas compactas.
+.mat-mdc-table {
+  background: transparent;
+}
+
+.mat-mdc-row.is-clickable {
+  cursor: pointer;
+
+  &:hover {
+    background: var(--app-olive-50);
+  }
+}
+
+.mat-mdc-header-row {
+  background: #fafaf8;
+}
+
+.mat-mdc-cell,
+.mat-mdc-header-cell {
+  padding-inline: 12px;
+}
+
+.mat-mdc-header-cell {
+  white-space: nowrap;
+}
+
+.mat-mdc-card-outlined {
+  border-radius: var(--app-radius);
+}
+
+.cdk-overlay-pane .mat-mdc-menu-panel {
+  min-width: 180px;
+}
